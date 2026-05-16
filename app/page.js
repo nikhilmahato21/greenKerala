@@ -1,0 +1,299 @@
+'use client'
+import { useState } from 'react'
+import Navbar from '@/components/Navbar'
+import HeroSlider from '@/components/HeroSlider'
+import PackageCard from '@/components/PackageCard'
+import Footer from '@/components/Footer'
+import { usePackages } from '@/hooks/usePackages'
+import { Phone, MessageCircle, MapPin, Mail, Star, Shield, Clock, Users } from 'lucide-react'
+
+const FILTERS = ['All', 'Goa', 'Gokarna', 'Chikmagalur']
+
+const DEST_INFO = {
+  Goa: {
+    img: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&q=80',
+    desc: 'Golden beaches, Portuguese forts & legendary nightlife',
+    color: '#2e9e7a',
+    emoji: '🏖️',
+  },
+  Gokarna: {
+    img: 'https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?w=800&q=80',
+    desc: 'Sacred shores, cliff treks & untouched beaches',
+    color: '#e8520a',
+    emoji: '🕉️',
+  },
+  Chikmagalur: {
+    img: 'https://images.pexels.com/photos/11532473/pexels-photo-11532473.jpeg',
+    desc: 'Misty coffee hills, forest treks & estate homestays',
+    color: '#2e3da8',
+    emoji: '☕',
+  },
+}
+
+export default function HomePage() {
+  const [active, setActive] = useState('All')
+  const { packages } = usePackages()
+  const shown = active === 'All' ? packages : packages.filter(p => p.destination === active)
+
+  return (
+    <main style={{ minHeight: '100vh', background: '#fff' }}>
+      <Navbar />
+      <HeroSlider />
+
+      {/* ── Destinations ── */}
+      <section id="destinations" style={{ padding: '80px 24px', background: '#f0ebe1' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#e8520a', marginBottom: 10 }}>
+              Where We Go
+            </p>
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(2rem, 5vw, 3rem)', color: '#111', marginBottom: 12 }}>
+              Three Perfect <span style={{ color: '#e8520a' }}>Destinations</span>
+            </h2>
+            <p style={{ color: '#6b7280', maxWidth: 500, margin: '0 auto', lineHeight: 1.6 }}>
+              Handpicked for their unique character — from sun-drenched beaches to misty coffee hills.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+            {Object.entries(DEST_INFO).map(([name, info]) => (
+              <button
+                key={name}
+                onClick={() => {
+                  setActive(name)
+                  document.getElementById('packages')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                style={{
+                  position: 'relative', borderRadius: 20, overflow: 'hidden',
+                  height: 280, cursor: 'pointer', border: 'none', padding: 0,
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                  transition: 'transform 0.3s, box-shadow 0.3s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                  e.currentTarget.style.boxShadow = '0 20px 50px rgba(0,0,0,0.25)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.15)'
+                }}
+              >
+                <img
+                  src={info.img} alt={name}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
+                />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 60%)' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 24, textAlign: 'left' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                    <MapPin size={13} style={{ color: info.color }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: info.color }}>
+                      {info.emoji} Explore
+                    </span>
+                  </div>
+                  <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 26, color: '#fff', marginBottom: 6, lineHeight: 1.1 }}>
+                    {name}
+                  </h3>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{info.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Packages ── */}
+      <section id="packages" style={{ padding: '80px 24px', background: '#fff' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#e8520a', marginBottom: 10 }}>
+              Curated Experiences
+            </p>
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(2rem, 5vw, 3rem)', color: '#111', marginBottom: 12 }}>
+              Our <span style={{ color: '#e8520a' }}>Packages</span>
+            </h2>
+            <p style={{ color: '#9ca3af', maxWidth: 480, margin: '0 auto 28px', lineHeight: 1.6 }}>
+              Every package includes a day-wise itinerary, accommodation & transfers.
+            </p>
+
+            {/* Filter tabs */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
+              {FILTERS.map(d => (
+                <button
+                  key={d}
+                  onClick={() => setActive(d)}
+                  style={{
+                    padding: '8px 20px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                    border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+                    background: active === d
+                      ? 'linear-gradient(135deg,#e8520a,#c93d00)'
+                      : '#f5f0e8',
+                    color: active === d ? '#fff' : '#555',
+                  }}
+                >
+                  {d === 'All' ? 'All Packages' : d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {shown.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🗺️</div>
+              <p>No packages available for this destination yet.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>
+              {shown.map(pkg => <PackageCard key={pkg.id} pkg={pkg} />)}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Why us ── */}
+      <section id="about" style={{ padding: '80px 24px', background: '#f0ebe1' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 56, alignItems: 'center' }}>
+            {/* Left text */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#e8520a', marginBottom: 12 }}>
+                Why Namaste Nomads
+              </p>
+              <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(2rem, 5vw, 3rem)', color: '#111', marginBottom: 16, lineHeight: 1.1 }}>
+                Travel <span style={{ color: '#e8520a' }}>Thoughtfully</span>
+              </h2>
+              <p style={{ color: '#6b7280', lineHeight: 1.7, marginBottom: 32 }}>
+                We&apos;re not just a travel company — we&apos;re a community of wanderers who believe every trip should tell a story. From beach shacks to misty coffee estates, we craft journeys that go beyond the tourist trail.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {[
+                  { icon: Star,   t: 'Curated Packages', d: 'Every detail handpicked' },
+                  { icon: Clock,  t: 'Day-wise Plans',   d: 'Hour by hour clarity' },
+                  { icon: Shield, t: 'Safe Travels',     d: 'Verified accommodations' },
+                  { icon: Users,  t: 'Small Groups',     d: 'Intimate experiences' },
+                ].map(({ icon: I, t, d }) => (
+                  <div
+                    key={t}
+                    style={{
+                      background: '#fff', borderRadius: 16, padding: '16px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    }}
+                  >
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fff5ef', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                      <I size={17} style={{ color: '#e8520a' }} />
+                    </div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#111' }}>{t}</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{d}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right image */}
+            <div style={{ position: 'relative' }}>
+              <div style={{ borderRadius: 24, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', aspectRatio: '1/1', maxWidth: 480, margin: '0 auto' }}>
+                <img src="https://images.pexels.com/photos/11532473/pexels-photo-11532473.jpeg" alt="Travel" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              {/* Stat badge */}
+              <div style={{
+                position: 'absolute', bottom: -16, left: -16,
+                background: '#fff', borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                padding: '16px 20px',
+              }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#e8520a' }}>500+</div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Happy travellers</div>
+              </div>
+              {/* Rating badge */}
+              <div style={{
+                position: 'absolute', top: -16, right: -16,
+                background: '#fff', borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                padding: '12px 16px',
+              }}>
+                <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
+                  {[...Array(5)].map((_, i) => <Star key={i} size={13} style={{ color: '#f59e0b', fill: '#f59e0b' }} />)}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#374151' }}>Rated 4.9/5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA / Contact ── */}
+      <section id="contact" style={{ padding: '80px 24px', background: '#2e3da8' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>
+            Ready to Go?
+          </p>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(2rem, 5vw, 3rem)', color: '#fff', marginBottom: 14, lineHeight: 1.1 }}>
+            Let&apos;s Plan Your <span style={{ color: '#fbbf24' }}>Dream Trip</span>
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 17, lineHeight: 1.6, marginBottom: 16 }}>
+            Tell us your dates and preferred destination — we&apos;ll craft the perfect itinerary for you.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 14, marginBottom: 32 }}>
+            <MapPin size={14} /> Hosur, Tamil Nadu
+          </div>
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a
+              href="tel:+918062179246"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '14px 32px', borderRadius: 999,
+                background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                color: '#1c1c1c', fontWeight: 700, fontSize: 15,
+                textDecoration: 'none', transition: 'transform 0.2s, box-shadow 0.2s',
+              }}
+            >
+              <Phone size={18} /> Call Us Now
+            </a>
+            <a
+              href="https://wa.me/918062179246?text=Hi! I want to book a trip with Namaste Nomads"
+              target="_blank" rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '14px 32px', borderRadius: 999,
+                background: 'linear-gradient(135deg,#25d366,#128c7e)',
+                color: '#fff', fontWeight: 700, fontSize: 15,
+                textDecoration: 'none',
+              }}
+            >
+              <MessageCircle size={18} /> WhatsApp Us
+            </a>
+            <a
+              href="mailto:info@namastenomads.com"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '14px 32px', borderRadius: 999,
+                background: 'rgba(255,255,255,0.15)',
+                color: '#fff', fontWeight: 700, fontSize: 15,
+                textDecoration: 'none',
+              }}
+            >
+              <Mail size={18} /> Email Us
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+
+      {/* Floating WhatsApp */}
+      <a
+        href="https://wa.me/918062179246?text=Hi! I want to book a trip!"
+        target="_blank" rel="noopener noreferrer"
+        aria-label="WhatsApp"
+        style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 999,
+          width: 56, height: 56, borderRadius: '50%',
+          background: 'linear-gradient(135deg,#25d366,#128c7e)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.5)',
+          transition: 'transform 0.2s',
+          textDecoration: 'none',
+        }}
+      >
+        <MessageCircle size={26} />
+      </a>
+    </main>
+  )
+}
