@@ -219,7 +219,7 @@ export default function HomePage() {
               <MessageCircle size={18} /> WhatsApp Us
             </a>
             <a
-              href="mailto:info@namastenomads.com"
+              href="mailto:info@namastenomads.in"
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 32px', borderRadius: 999, background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 700, fontSize: 15, textDecoration: 'none' }}
             >
               <Mail size={18} /> Email Us

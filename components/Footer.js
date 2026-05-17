@@ -57,7 +57,7 @@ export default function Footer() {
             <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color:'rgba(255,255,255,0.9)' }}>Contact</h4>
             <ul className="space-y-3 text-sm" style={{ color:'rgba(255,255,255,0.5)' }}>
               <li><a href={`tel:+${phone}`} className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Phone size={14}/> +{phone}</a></li>
-              <li><a href="mailto:info@namastenomads.com" className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Mail size={14}/> info@namastenomads.com</a></li>
+              <li><a href="mailto:info@namastenomads.in" className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Mail size={14}/> info@namastenomads.in</a></li>
               <li><a href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-400 transition-colors"><MessageCircle size={14}/> WhatsApp Us</a></li>
               <li><span className="flex items-center gap-2"><MapPin size={14}/> Hosur, Tamil Nadu</span></li>
             </ul>
