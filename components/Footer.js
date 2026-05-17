@@ -1,6 +1,8 @@
+'use client'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, Mail, MessageCircle, MapPin } from 'lucide-react'
+import { usePhone } from '@/hooks/useSettings'
 
 function IgIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
@@ -10,6 +12,8 @@ function FbIcon() {
 }
 
 export default function Footer() {
+  const phone = usePhone()
+
   return (
     <footer style={{ background: '#0f1020' }} className="text-white">
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-16">
@@ -23,11 +27,11 @@ export default function Footer() {
                 <Image src="https://res.cloudinary.com/dynbpb9u0/image/upload/v1778949528/WhatsApp_Image_2026-05-15_at_08.35.25-removebg-preview_jfct8b.png" alt="Namaste Nomads" width={80} height={28} className="h-full w-auto object-contain" style={{ filter:'brightness(0) invert(1)' }} />
               </div>
             </div>
-            <p className="text-sm leading-relaxed mb-4" style={{ color:'rgba(255,255,255,0.5)' }}>Curated travel experiences to Goa, Gokarna & Chikmagalur with day-wise itineraries.</p>
+            <p className="text-sm leading-relaxed mb-4" style={{ color:'rgba(255,255,255,0.5)' }}>Curated travel experiences with day-wise itineraries and personal support.</p>
             <div className="flex gap-3">
-              <a href="#" className="w-9 h-9 rounded-full flex items-center justify-center transition-colors" style={{ background:'rgba(255,255,255,0.1)' }}><IgIcon/></a>
-              <a href="#" className="w-9 h-9 rounded-full flex items-center justify-center transition-colors" style={{ background:'rgba(255,255,255,0.1)' }}><FbIcon/></a>
-              <a href="https://wa.me/918062179246" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background:'rgba(255,255,255,0.1)' }}><MessageCircle size={16}/></a>
+              <a href="#" className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background:'rgba(255,255,255,0.1)' }}><IgIcon/></a>
+              <a href="#" className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background:'rgba(255,255,255,0.1)' }}><FbIcon/></a>
+              <a href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background:'rgba(255,255,255,0.1)' }}><MessageCircle size={16}/></a>
             </div>
           </div>
 
@@ -52,9 +56,9 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color:'rgba(255,255,255,0.9)' }}>Contact</h4>
             <ul className="space-y-3 text-sm" style={{ color:'rgba(255,255,255,0.5)' }}>
-              <li><a href="tel:+918062179246" className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Phone size={14}/> +91 80621 79246</a></li>
+              <li><a href={`tel:+${phone}`} className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Phone size={14}/> +{phone}</a></li>
               <li><a href="mailto:info@namastenomads.com" className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Mail size={14}/> info@namastenomads.com</a></li>
-              <li><a href="https://wa.me/918062179246" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-400 transition-colors"><MessageCircle size={14}/> WhatsApp Us</a></li>
+              <li><a href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-400 transition-colors"><MessageCircle size={14}/> WhatsApp Us</a></li>
               <li><span className="flex items-center gap-2"><MapPin size={14}/> Hosur, Tamil Nadu</span></li>
             </ul>
           </div>

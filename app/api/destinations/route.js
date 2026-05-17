@@ -15,9 +15,9 @@ export async function POST(request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
-    const { name, color } = await request.json()
+    const { name, color, image_url, description, emoji } = await request.json()
     if (!name?.trim()) return Response.json({ error: 'Name is required' }, { status: 400 })
-    const dest = await createDestination(name.trim(), color || '#e8520a')
+    const dest = await createDestination(name.trim(), color || '#e8520a', { image_url, description, emoji })
     return Response.json(dest, { status: 201 })
   } catch (err) {
     if (err.message?.includes('unique')) {

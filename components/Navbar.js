@@ -3,10 +3,12 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Menu, X, Phone, MessageCircle } from 'lucide-react'
+import { usePhone } from '@/hooks/useSettings'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const phone = usePhone()
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50)
@@ -66,10 +68,7 @@ export default function Navbar() {
                 style={{ color: scrolled ? '#374151' : 'rgba(255,255,255,0.9)' }}
               >
                 {l.label}
-                <span
-                  className="absolute -bottom-0.5 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-300 rounded-full"
-                  style={{ background: '#e8520a' }}
-                />
+                <span className="absolute -bottom-0.5 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-300 rounded-full" style={{ background: '#e8520a' }} />
               </Link>
             ))}
           </div>
@@ -77,17 +76,14 @@ export default function Navbar() {
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-2">
             <a
-              href="tel:+918062179246"
+              href={`tel:+${phone}`}
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full border transition-all duration-200"
-              style={{
-                borderColor: scrolled ? '#e8520a' : 'rgba(255,255,255,0.6)',
-                color: scrolled ? '#e8520a' : '#fff',
-              }}
+              style={{ borderColor: scrolled ? '#e8520a' : 'rgba(255,255,255,0.6)', color: scrolled ? '#e8520a' : '#fff' }}
             >
               <Phone size={14} /> Call Us
             </a>
             <a
-              href="https://wa.me/919999999999?text=Hi! I want to book a trip!"
+              href={`https://wa.me/${phone}?text=Hi! I want to book a trip!`}
               target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full text-white transition-all duration-200 hover:opacity-90"
               style={{ background: 'linear-gradient(135deg,#25d366,#128c7e)' }}
@@ -97,11 +93,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile toggle */}
-          <button
-            onClick={() => setOpen(!open)}
-            className="md:hidden p-2 rounded-lg"
-            style={{ color: scrolled ? '#374151' : '#fff' }}
-          >
+          <button onClick={() => setOpen(!open)} className="md:hidden p-2 rounded-lg" style={{ color: scrolled ? '#374151' : '#fff' }}>
             {open ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -109,32 +101,23 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div
-          className="md:hidden border-t"
-          style={{ background: '#fff', borderColor: 'rgba(0,0,0,0.06)' }}
-        >
+        <div className="md:hidden border-t" style={{ background: '#fff', borderColor: 'rgba(0,0,0,0.06)' }}>
           <div className="px-4 py-4 space-y-1">
             {navLinks.map(l => (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="block py-2.5 px-3 text-gray-700 font-medium rounded-xl transition-colors"
-                style={{}}
-              >
+              <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2.5 px-3 text-gray-700 font-medium rounded-xl transition-colors">
                 {l.label}
               </Link>
             ))}
             <div className="flex gap-2 pt-3">
               <a
-                href="tel:+918062179246"
+                href={`tel:+${phone}`}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-sm font-semibold border"
                 style={{ borderColor: '#e8520a', color: '#e8520a' }}
               >
                 <Phone size={14} /> Call
               </a>
               <a
-                href="https://wa.me/919999999999"
+                href={`https://wa.me/${phone}?text=Hi! I want to book a trip!`}
                 target="_blank" rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-sm font-semibold text-white"
                 style={{ background: 'linear-gradient(135deg,#25d366,#128c7e)' }}
