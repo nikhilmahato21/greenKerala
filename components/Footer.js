@@ -19,13 +19,13 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-16">
         <div className="grid md:grid-cols-4 gap-10 mb-12">
           <div className="md:col-span-1">
-            <div className="flex items-center gap-1 mb-4">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-14 h-14 shrink-0 overflow-hidden">
-                <Image src="https://res.cloudinary.com/dynbpb9u0/image/upload/v1778949528/WhatsApp_Image_2026-05-15_at_08.35.52-removebg-preview_g7xcil.png" alt="Namaste Nomads" width={56} height={56} className="w-full h-full object-contain" style={{ filter:'brightness(0) invert(1)' }} />
+                <Image src="https://res.cloudinary.com/dynbpb9u0/image/upload/v1779855779/WhatsApp_Image_2026-05-22_at_15.06.01-removebg-preview_mr6pdc.png" alt="Green Kerala Trips" width={56} height={56} className="w-full h-full object-contain" />
               </div>
-              <div className="h-9 pt-3">
-                <Image src="https://res.cloudinary.com/dynbpb9u0/image/upload/v1778949528/WhatsApp_Image_2026-05-15_at_08.35.25-removebg-preview_jfct8b.png" alt="Namaste Nomads" width={80} height={28} className="h-full w-auto object-contain" style={{ filter:'brightness(0) invert(1)' }} />
-              </div>
+              <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, lineHeight: 1.3, color: '#fff' }}>
+                Green Kerala<br /><span style={{ color: '#e8520a' }}>Trips</span>
+              </span>
             </div>
             <p className="text-sm leading-relaxed mb-4" style={{ color:'rgba(255,255,255,0.5)' }}>Curated travel experiences with day-wise itineraries and personal support.</p>
             <div className="flex gap-3">
@@ -38,7 +38,7 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color:'rgba(255,255,255,0.9)' }}>Destinations</h4>
             <ul className="space-y-2 text-sm" style={{ color:'rgba(255,255,255,0.5)' }}>
-              {['Goa', 'Gokarna', 'Chikmagalur'].map(d => (
+              {['Munnar', 'Alleppey', 'Wayanad'].map(d => (
                 <li key={d}><Link href="/#packages" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors"><MapPin size={11}/>{d}</Link></li>
               ))}
             </ul>
@@ -57,16 +57,16 @@ export default function Footer() {
             <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color:'rgba(255,255,255,0.9)' }}>Contact</h4>
             <ul className="space-y-3 text-sm" style={{ color:'rgba(255,255,255,0.5)' }}>
               <li><a href={`tel:+${phone}`} className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Phone size={14}/> +{phone}</a></li>
-              <li><a href="mailto:info@namastenomads.in" className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Mail size={14}/> info@namastenomads.in</a></li>
+              <li><a href="mailto:jerinantony.fg@gmail.com" className="flex items-center gap-2 hover:text-orange-400 transition-colors"><Mail size={14}/> jerinantony.fg@gmail.com</a></li>
               <li><a href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-400 transition-colors"><MessageCircle size={14}/> WhatsApp Us</a></li>
-              <li><span className="flex items-center gap-2"><MapPin size={14}/> Hosur, Tamil Nadu</span></li>
+              <li><span className="flex items-center gap-2"><MapPin size={14}/> Kerala, Alappuzha</span></li>
             </ul>
           </div>
         </div>
 
         <div className="h-px mb-6" style={{ background:'rgba(255,255,255,0.1)' }} />
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs" style={{ color:'rgba(255,255,255,0.3)' }}>
-          <p>© {new Date().getFullYear()} Namaste Nomads. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Green Kerala Trips. All rights reserved.</p>
           <p>Made with ❤️ for wanderers</p>
         </div>
       </div>

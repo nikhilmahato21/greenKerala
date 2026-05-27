@@ -38,24 +38,22 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16 md:h-20">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center justify-center gap-1 group">
+          <Link href="/" className="flex items-center justify-center gap-2 group">
             <div className="w-16 h-16 overflow-hidden shrink-0">
               <Image
-                src="https://res.cloudinary.com/dynbpb9u0/image/upload/v1778949528/WhatsApp_Image_2026-05-15_at_08.35.52-removebg-preview_g7xcil.png"
-                alt="Namaste Nomads"
+                src="https://res.cloudinary.com/dynbpb9u0/image/upload/v1779855779/WhatsApp_Image_2026-05-22_at_15.06.01-removebg-preview_mr6pdc.png"
+                alt="Green Kerala Trips"
                 width={64} height={64}
                 className="w-full h-full object-contain"
               />
             </div>
-            <div className="h-9 pt-3 relative">
-              <Image
-                src="https://res.cloudinary.com/dynbpb9u0/image/upload/v1778949528/WhatsApp_Image_2026-05-15_at_08.35.25-removebg-preview_jfct8b.png"
-                alt="Namaste Nomads"
-                width={80} height={28}
-                className="h-full w-auto object-contain"
-                style={{ filter: scrolled ? 'none' : 'brightness(0) invert(1)' }}
-              />
-            </div>
+            <span
+              className="font-bold text-base leading-tight hidden sm:block"
+              style={{ fontFamily: 'Syne, sans-serif', color: scrolled ? '#1a3c2e' : '#fff' }}
+            >
+              Green Kerala<br />
+              <span style={{ color: '#e8520a', fontWeight: 700 }}>Trips</span>
+            </span>
           </Link>
 
           {/* Desktop Nav */}

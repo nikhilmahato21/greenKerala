@@ -13,7 +13,7 @@ export async function GET() {
     const packages = await getAllPackages()
     await setCachedPackages(packages)
     return Response.json(packages)
-  } catch (err) {
+  } catch {
     return Response.json({ error: 'Failed to fetch packages' }, { status: 500 })
   }
 }
@@ -28,7 +28,7 @@ export async function POST(request) {
     const created = await insertPackage(pkg)
     await invalidatePackagesCache()
     return Response.json(created, { status: 201 })
-  } catch (err) {
+  } catch {
     return Response.json({ error: 'Failed to create package' }, { status: 500 })
   }
 }

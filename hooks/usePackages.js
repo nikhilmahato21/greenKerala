@@ -17,7 +17,9 @@ export function usePackages() {
     setLoaded(true)
   }, [])
 
-  useEffect(() => { fetchPackages() }, [fetchPackages])
+  useEffect(() => {
+    fetchPackages()
+  }, [fetchPackages])
 
   const add = async (pkg) => {
     const res = await fetch('/api/packages', {

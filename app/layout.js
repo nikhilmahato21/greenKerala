@@ -2,8 +2,8 @@ import './globals.css'
 import { Toaster } from 'sonner'
 
 export const metadata = {
-  title: 'Namaste Nomads — Goa, Gokarna & Chikmagalur',
-  description: 'Handcrafted travel experiences to Goa, Gokarna & Chikmagalur. Curated packages with day-wise itineraries.',
+  title: 'Green Kerala Trips — Kerala Tour Packages & Homestays',
+  description: 'Handcrafted travel experiences across Kerala. Curated group packages & homestay bookings with day-wise itineraries.',
 }
 
 export default function RootLayout({ children }) {

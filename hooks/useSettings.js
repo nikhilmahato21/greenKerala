@@ -22,7 +22,7 @@ export function invalidateSettingsCache() {
 export function useSettings() {
   const [settings, setSettings] = useState(() => _cache || DEFAULTS)
   useEffect(() => {
-    if (_cache) { setSettings(_cache); return }
+    if (_cache) return
     loadSettings().then(setSettings)
   }, [])
   return settings
