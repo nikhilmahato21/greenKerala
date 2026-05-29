@@ -11,6 +11,24 @@ function fmt(n) {
   return '₹' + Number(n).toLocaleString('en-IN')
 }
 
+function fmtRange(dr) {
+  if (typeof dr === 'string') return dr
+  const { start, end } = dr || {}
+  if (!start && !end) return ''
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const f = d => { const dt = new Date(d + 'T00:00:00'); return `${dt.getDate()} ${M[dt.getMonth()]}, ${dt.getFullYear()}` }
+  const s = start ? f(start) : '', e = end ? f(end) : ''
+  return s && e ? `${s} – ${e}` : s || e
+}
+function groupMonth(group) {
+  if (group.month) return group.month
+  const first = group.dates?.[0]
+  const start = first ? (typeof first === 'string' ? '' : first.start) : ''
+  if (!start) return ''
+  const dt = new Date(start + 'T00:00:00')
+  return dt.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+}
+
 const INPUT = {
   width: '100%', padding: '11px 14px', borderRadius: 10,
   border: '1.5px solid #e5e7eb', fontSize: 14, color: '#111',
@@ -154,6 +172,43 @@ export default function PackagePage({ params }) {
               </section>
             )}
 
+            {/* Available Dates — Group Packages */}
+            {pkg.category === 'group' && pkg.availableDates?.length > 0 && (
+              <section style={{ marginBottom: 36 }}>
+                <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: isMobile ? 20 : 24, color: '#111', marginBottom: 16 }}>Available Dates</h2>
+                <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, overflow: 'hidden' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    <div style={{ padding: '10px 18px', fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Available Dates</div>
+                    <div style={{ padding: '10px 18px', fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Reserve</div>
+                  </div>
+                  {pkg.availableDates.map((group, gi) => {
+                    const month = groupMonth(group)
+                    const validDates = (group.dates || []).filter(dr => fmtRange(dr))
+                    if (!validDates.length && !month) return null
+                    return (
+                    <div key={gi} style={{ borderBottom: gi < pkg.availableDates.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', padding: '14px 18px', gap: 16 }}>
+                        <div>
+                          {month && <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>{month}</div>}
+                          {validDates.map((dr, di) => (
+                            <div key={di} style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.8 }}>{fmtRange(dr)}</div>
+                          ))}
+                        </div>
+                        <a
+                          href={`https://wa.me/${phone}?text=${encodeURIComponent(`Hi! I want to reserve ${pkg.title} — ${groupMonth(group) || ''}`)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          style={{ padding: '9px 22px', borderRadius: 999, background: 'linear-gradient(135deg,#2e9e7a,#1e7a5e)', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}
+                        >
+                          Reserve
+                        </a>
+                      </div>
+                    </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
             {/* Itinerary */}
             {pkg.itinerary?.length > 0 && (
               <section style={{ marginBottom: 36 }}>
@@ -180,7 +235,15 @@ export default function PackagePage({ params }) {
                       </button>
                       {openDay === i && (
                         <div style={{ padding: '0 16px 16px', borderTop: '1px solid #f9f0eb' }}>
-                          <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.7, margin: '14px 0' }}>{day.description}</p>
+                          {day.image && (
+                            <img
+                              src={day.image}
+                              alt={day.title}
+                              onError={e => e.target.style.display = 'none'}
+                              style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 10, marginTop: 14, marginBottom: 12 }}
+                            />
+                          )}
+                          <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.7, margin: day.image ? '0 0 14px' : '14px 0' }}>{day.description}</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {day.activities?.map((a, j) => (
                               <span key={j} style={{ padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 500, background: '#f5f0e8', color: '#555' }}>{a}</span>

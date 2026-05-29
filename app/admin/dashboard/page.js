@@ -3,10 +3,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { invalidateSettingsCache } from '@/hooks/useSettings'
+import TagSelector from '@/components/TagSelector'
 import {
   Plus, Pencil, Trash2, LogOut, Eye, X, Check, ExternalLink, AlertTriangle,
   Package, MapPin, Inbox, Settings, Phone, MessageCircle, Mail, Calendar,
-  Building2, Clock, CheckCircle, XCircle, Star,
+  Building2, CheckCircle, XCircle, Star,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -15,6 +16,7 @@ function fmt(n) { return '₹' + Number(n).toLocaleString('en-IN') }
 function fmtDate(ts) { return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 
 const CATEGORIES = [
+  { value: 'package',  label: 'Package' },
   { value: 'group',    label: 'Group Package' },
   { value: 'homestay', label: 'Home Stay' },
   { value: 'other',    label: 'Other' },
@@ -30,10 +32,25 @@ const EMPTY_PKG = {
   id: '', destination: '', badge: '', badgeColor: '#2e9e7a',
   duration: '3 Days & 2 Nights', title: '', subtitle: '', hotels: '',
   originalPrice: '', salePrice: '', priceNote: 'Per Person',
-  image: '', heroImage: '', overview: '', category: 'group',
-  highlights: [''], inclusions: [''], exclusions: [''],
-  itinerary: [{ day: 1, title: '', description: '', activities: [''] }],
+  image: '', heroImage: '', overview: '', category: 'package',
+  highlights: [], inclusions: [], exclusions: [],
+  itinerary: [{ day: 1, title: '', description: '', activities: [''], image: '' }],
+  availableDates: [],
 }
+
+function fmtRange(start, end) {
+  if (!start && !end) return ''
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const f = d => { const dt = new Date(d + 'T00:00:00'); return `${dt.getDate()} ${M[dt.getMonth()]}, ${dt.getFullYear()}` }
+  const s = start ? f(start) : '', e = end ? f(end) : ''
+  return s && e ? `${s} – ${e}` : s || e
+}
+function autoMonth(dateStr) {
+  if (!dateStr) return ''
+  const dt = new Date(dateStr + 'T00:00:00')
+  return dt.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+}
+function getDR(dr) { return (dr && typeof dr === 'object') ? dr : { start: '', end: dr || '' } }
 
 export default function Dashboard() {
   const router = useRouter()
@@ -53,7 +70,10 @@ export default function Dashboard() {
   const [confirm, setConfirm] = useState(null)
   const [tab, setTab] = useState('basic')
   const [saving, setSaving] = useState(false)
+  const [actionLoading, setActionLoading] = useState(null)
+  const [pkgSearch, setPkgSearch] = useState('')
   const [agencyFilter, setAgencyFilter] = useState('all')
+  const [pkgOptions, setPkgOptions] = useState({ inclusion: [], exclusion: [], highlight: [] })
 
   const [newDest, setNewDest] = useState({ name: '', color: '#e8520a', image_url: '', description: '', emoji: '📍' })
   const [destSaving, setDestSaving] = useState(false)
@@ -94,6 +114,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchPackages()
     fetchDestinations()
+    fetch('/api/package-options').then(r => r.ok ? r.json() : null).then(d => { if (d) setPkgOptions(d) }).catch(() => {})
   }, [fetchPackages, fetchDestinations])
 
   useEffect(() => {
@@ -117,17 +138,19 @@ export default function Dashboard() {
 
   const openAdd = () => {
     const first = destinations[0]
-    setForm({ ...EMPTY_PKG, id: 'pkg-' + Date.now(), destination: first?.name ?? '', badgeColor: first?.color ?? '#2e9e7a' })
+    const pkgId = 'GKT-' + Math.random().toString(36).slice(2, 8).toUpperCase()
+    setForm({ ...EMPTY_PKG, id: pkgId, destination: first?.name ?? '', badgeColor: first?.color ?? '#2e9e7a' })
     setEditId(null); setTab('basic'); setModal('form')
   }
 
   const openEdit = (pkg) => {
     setForm({
       ...pkg,
-      highlights: pkg.highlights?.length ? pkg.highlights : [''],
-      inclusions: pkg.inclusions?.length ? pkg.inclusions : [''],
-      exclusions: pkg.exclusions?.length ? pkg.exclusions : [''],
-      itinerary: pkg.itinerary?.length ? pkg.itinerary.map(d => ({ ...d, activities: d.activities?.length ? d.activities : [''] })) : [{ day: 1, title: '', description: '', activities: [''] }],
+      highlights: pkg.highlights || [],
+      inclusions: pkg.inclusions || [],
+      exclusions: pkg.exclusions || [],
+      itinerary: pkg.itinerary?.length ? pkg.itinerary.map(d => ({ ...d, activities: d.activities?.length ? d.activities : [''], image: d.image || '' })) : [{ day: 1, title: '', description: '', activities: [''], image: '' }],
+      availableDates: pkg.availableDates || [],
     })
     setEditId(pkg.id); setTab('basic'); setModal('form')
   }
@@ -176,6 +199,7 @@ export default function Dashboard() {
   }
 
   const handleApprove = async (id, status) => {
+    setActionLoading(`approve-${id}-${status}`)
     try {
       const res = await fetch(`/api/packages/${id}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
       if (!res.ok) throw new Error()
@@ -183,10 +207,13 @@ export default function Dashboard() {
       toast.success(`Package ${status}`)
     } catch {
       toast.error('Failed to update status')
+    } finally {
+      setActionLoading(null)
     }
   }
 
   const handleFeature = async (id, featured, order) => {
+    setActionLoading(`feature-${id}`)
     try {
       const res = await fetch(`/api/packages/${id}/feature`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ featured, order }) })
       if (!res.ok) throw new Error()
@@ -194,12 +221,15 @@ export default function Dashboard() {
       toast.success(featured ? 'Package added to hero!' : 'Removed from hero')
     } catch {
       toast.error('Failed to update featured status')
+    } finally {
+      setActionLoading(null)
     }
   }
 
   // ─── Agency handlers ───────────────────────────────────────────────────────
 
   const handleAgencyStatus = async (id, status) => {
+    setActionLoading(`agency-${id}-${status}`)
     try {
       const res = await fetch(`/api/agencies/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
       if (!res.ok) throw new Error()
@@ -207,6 +237,8 @@ export default function Dashboard() {
       toast.success(`Agency ${status}`)
     } catch {
       toast.error('Failed to update agency')
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -289,18 +321,23 @@ export default function Dashboard() {
   }
 
   // ─── Array helpers ────────────────────────────────────────────────────────
-  const arrChange = (field, idx, val) => { const a = [...(form[field] || [])]; a[idx] = val; setForm(f => ({ ...f, [field]: a })) }
-  const arrAdd = (field) => setForm(f => ({ ...f, [field]: [...(f[field] || []), ''] }))
-  const arrDel = (field, idx) => setForm(f => ({ ...f, [field]: (f[field] || []).filter((_, i) => i !== idx) }))
   const itinChange = (di, field, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => i === di ? { ...d, [field]: val } : d) }))
   const actChange = (di, ai, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => { if (i !== di) return d; const a = [...(d.activities || [])]; a[ai] = val; return { ...d, activities: a } }) }))
-  const addDay = () => setForm(f => ({ ...f, itinerary: [...(f.itinerary || []), { day: (f.itinerary || []).length + 1, title: '', description: '', activities: [''] }] }))
+  const addDay = () => setForm(f => ({ ...f, itinerary: [...(f.itinerary || []), { day: (f.itinerary || []).length + 1, title: '', description: '', activities: [''], image: '' }] }))
   const removeDay = (idx) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).filter((_, i) => i !== idx) }))
+
+  const addDateGroup = () => setForm(f => ({ ...f, availableDates: [...(f.availableDates || []), { month: '', dates: [{ start: '', end: '' }] }] }))
+  const removeDateGroup = (gi) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).filter((_, i) => i !== gi) }))
+  const dateGroupChange = (gi, field, val) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i === gi ? { ...g, [field]: val } : g) }))
+  const addDateRange = (gi) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i === gi ? { ...g, dates: [...(g.dates || []), { start: '', end: '' }] } : g) }))
+  const removeDateRange = (gi, di) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i !== gi ? g : { ...g, dates: (g.dates || []).filter((_, j) => j !== di) }) }))
+  const setDateField = (gi, di, field, val) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i !== gi ? g : { ...g, dates: (g.dates || []).map((d, j) => j !== di ? d : { ...getDR(d), [field]: val }) }) }))
 
   // ─── Derived data ─────────────────────────────────────────────────────────
   const filteredPackages = allPackages
     .filter(p => pkgFilter === 'all' || p.category === pkgFilter)
     .filter(p => pkgStatus === 'all' || p.status === pkgStatus)
+    .filter(p => !pkgSearch.trim() || p.id.toLowerCase().includes(pkgSearch.toLowerCase()) || (p.title || '').toLowerCase().includes(pkgSearch.toLowerCase()))
 
   const pendingCount = allPackages.filter(p => p.status === 'pending').length
   const pendingAgencies = agencies.filter(a => a.status === 'pending').length
@@ -406,6 +443,16 @@ export default function Dashboard() {
               ))}
             </div>
 
+            {/* Search */}
+            <div style={{ marginBottom: 12 }}>
+              <input
+                value={pkgSearch}
+                onChange={e => setPkgSearch(e.target.value)}
+                placeholder="Search by Package ID or title..."
+                style={{ width: '100%', maxWidth: 360, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#111', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
             {/* Filters */}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -459,8 +506,8 @@ export default function Dashboard() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                        {['Package', 'Category', 'Destination', 'Price', 'Status', 'Hero', 'Actions'].map((h, i) => (
-                          <th key={h} style={{ padding: '10px 16px', textAlign: i >= 5 ? 'center' : 'left', fontWeight: 700, color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                        {['Pkg ID', 'Package', 'Category', 'Destination', 'Price', 'Status', 'Hero', 'Actions'].map((h, i) => (
+                          <th key={h} style={{ padding: '10px 16px', textAlign: i >= 6 ? 'center' : 'left', fontWeight: 700, color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -474,13 +521,16 @@ export default function Dashboard() {
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                           >
                             <td style={{ padding: '12px 16px' }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#e8520a', background: '#fff5ef', padding: '3px 8px', borderRadius: 6, fontFamily: 'monospace', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{pkg.id}</span>
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <div style={{ width: 44, height: 36, borderRadius: 8, overflow: 'hidden', background: '#f3f4f6', flexShrink: 0 }}>
                                   {pkg.image && <img src={pkg.image} alt={pkg.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />}
                                 </div>
                                 <div>
                                   <div style={{ fontWeight: 600, color: '#111', fontSize: 13 }}>{pkg.title}</div>
-                                  {pkg.agencyName && <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>via {pkg.agencyName}</div>}
+                                  {pkg.agencyName && <div style={{ fontSize: 10, color: '#e8520a', marginTop: 1, fontWeight: 600 }}>🏢 {pkg.agencyName}</div>}
                                 </div>
                               </div>
                             </td>
@@ -496,13 +546,13 @@ export default function Dashboard() {
                             <td style={{ padding: '12px 16px' }}>
                               {pkg.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: 4 }}>
-                                  <button onClick={() => handleApprove(pkg.id, 'approved')} title="Approve"
-                                    style={{ padding: '4px 10px', borderRadius: 8, border: 'none', background: '#f0fdf4', color: '#22c55e', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <CheckCircle size={12} /> Approve
+                                  <button onClick={() => handleApprove(pkg.id, 'approved')} disabled={actionLoading !== null} title="Approve"
+                                    style={{ padding: '4px 10px', borderRadius: 8, border: 'none', background: '#f0fdf4', color: '#22c55e', fontWeight: 700, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: actionLoading === `approve-${pkg.id}-approved` ? 0.7 : 1 }}>
+                                    {actionLoading === `approve-${pkg.id}-approved` ? <span style={{ width: 10, height: 10, border: '2px solid #bbf7d0', borderTop: '2px solid #22c55e', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} /> : <CheckCircle size={12} />} Approve
                                   </button>
-                                  <button onClick={() => handleApprove(pkg.id, 'rejected')} title="Reject"
-                                    style={{ padding: '4px 10px', borderRadius: 8, border: 'none', background: '#fef2f2', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <XCircle size={12} /> Reject
+                                  <button onClick={() => handleApprove(pkg.id, 'rejected')} disabled={actionLoading !== null} title="Reject"
+                                    style={{ padding: '4px 10px', borderRadius: 8, border: 'none', background: '#fef2f2', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: actionLoading === `approve-${pkg.id}-rejected` ? 0.7 : 1 }}>
+                                    {actionLoading === `approve-${pkg.id}-rejected` ? <span style={{ width: 10, height: 10, border: '2px solid #fecaca', borderTop: '2px solid #ef4444', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} /> : <XCircle size={12} />} Reject
                                   </button>
                                 </div>
                               ) : (
@@ -513,9 +563,13 @@ export default function Dashboard() {
                               {pkg.status === 'approved' && (
                                 <button
                                   onClick={() => handleFeature(pkg.id, !pkg.featured, pkg.featured ? 0 : featuredPackages.length)}
+                                  disabled={actionLoading === `feature-${pkg.id}`}
                                   title={pkg.featured ? 'Remove from hero' : 'Push to hero'}
-                                  style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${pkg.featured ? '#fde68a' : '#e5e7eb'}`, background: pkg.featured ? '#fffbeb' : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-                                  <Star size={14} style={{ color: pkg.featured ? '#f59e0b' : '#d1d5db', fill: pkg.featured ? '#f59e0b' : 'none' }} />
+                                  style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${pkg.featured ? '#fde68a' : '#e5e7eb'}`, background: pkg.featured ? '#fffbeb' : 'none', cursor: actionLoading === `feature-${pkg.id}` ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                                  {actionLoading === `feature-${pkg.id}`
+                                    ? <span style={{ width: 10, height: 10, border: '2px solid #fde68a', borderTop: '2px solid #f59e0b', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />
+                                    : <Star size={14} style={{ color: pkg.featured ? '#f59e0b' : '#d1d5db', fill: pkg.featured ? '#f59e0b' : 'none' }} />
+                                  }
                                 </button>
                               )}
                             </td>
@@ -611,15 +665,15 @@ export default function Dashboard() {
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                           {agency.status !== 'approved' && (
-                            <button onClick={() => handleAgencyStatus(agency.id, 'approved')}
-                              style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#f0fdf4', color: '#22c55e', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <CheckCircle size={13} /> Approve
+                            <button onClick={() => handleAgencyStatus(agency.id, 'approved')} disabled={actionLoading !== null}
+                              style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#f0fdf4', color: '#22c55e', fontWeight: 700, fontSize: 12, cursor: actionLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 5, opacity: actionLoading === `agency-${agency.id}-approved` ? 0.7 : 1 }}>
+                              {actionLoading === `agency-${agency.id}-approved` ? <span style={{ width: 11, height: 11, border: '2px solid #bbf7d0', borderTop: '2px solid #22c55e', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} /> : <CheckCircle size={13} />} Approve
                             </button>
                           )}
                           {agency.status !== 'rejected' && (
-                            <button onClick={() => handleAgencyStatus(agency.id, 'rejected')}
-                              style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#fef2f2', color: '#ef4444', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <XCircle size={13} /> Reject
+                            <button onClick={() => handleAgencyStatus(agency.id, 'rejected')} disabled={actionLoading !== null}
+                              style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#fef2f2', color: '#ef4444', fontWeight: 700, fontSize: 12, cursor: actionLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 5, opacity: actionLoading === `agency-${agency.id}-rejected` ? 0.7 : 1 }}>
+                              {actionLoading === `agency-${agency.id}-rejected` ? <span style={{ width: 11, height: 11, border: '2px solid #fecaca', borderTop: '2px solid #ef4444', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} /> : <XCircle size={13} />} Reject
                             </button>
                           )}
                           <button onClick={() => handleDeleteAgency(agency.id, agency.name)}
@@ -768,6 +822,54 @@ export default function Dashboard() {
                     <label style={S.label}>Overview</label>
                     <textarea rows={3} value={form.overview} onChange={e => setForm(f => ({ ...f, overview: e.target.value }))} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
                   </div>
+                  {form.category === 'group' && (
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 4 }}>
+                        <label style={S.label}>Available Dates</label>
+                        <button onClick={addDateGroup} style={{ fontSize: 12, fontWeight: 600, color: '#e8520a', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Plus size={12} /> Add Batch
+                        </button>
+                      </div>
+                      {(form.availableDates || []).length === 0 && (
+                        <p style={{ fontSize: 12, color: '#9ca3af', background: '#f9fafb', borderRadius: 10, padding: '10px 14px', margin: 0 }}>No departure dates yet. Click &ldquo;Add Batch&rdquo; to add a group of dates.</p>
+                      )}
+                      {(form.availableDates || []).map((group, gi) => {
+                        const firstStart = getDR(group.dates?.[0]).start
+                        return (
+                          <div key={gi} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, marginBottom: 8, background: '#fafafa' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                              <input
+                                value={group.month}
+                                onChange={e => dateGroupChange(gi, 'month', e.target.value)}
+                                style={{ ...S.input, fontSize: 12, flex: 1 }}
+                                placeholder={autoMonth(firstStart) || 'Month label (auto-fills from dates)'}
+                              />
+                              <button onClick={() => removeDateGroup(gi)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', flexShrink: 0 }}><X size={14} /></button>
+                            </div>
+                            {(group.dates || []).map((dr, di) => {
+                              const d = getDR(dr)
+                              return (
+                                <div key={di} style={{ marginBottom: 8 }}>
+                                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                    <input type="date" value={d.start} onChange={e => setDateField(gi, di, 'start', e.target.value)} style={{ ...S.input, fontSize: 12, flex: 1 }} />
+                                    <span style={{ color: '#9ca3af', fontSize: 13, flexShrink: 0 }}>→</span>
+                                    <input type="date" value={d.end} onChange={e => setDateField(gi, di, 'end', e.target.value)} style={{ ...S.input, fontSize: 12, flex: 1 }} />
+                                    {(group.dates || []).length > 1 && (
+                                      <button onClick={() => removeDateRange(gi, di)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', flexShrink: 0 }}><X size={13} /></button>
+                                    )}
+                                  </div>
+                                  {(d.start || d.end) && (
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3, paddingLeft: 2 }}>{fmtRange(d.start, d.end)}</div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                            <button onClick={() => addDateRange(gi)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e8520a', fontSize: 12, fontWeight: 600, padding: '2px 0' }}>+ Add date range</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
               {tab === 'itinerary' && (
@@ -779,7 +881,12 @@ export default function Dashboard() {
                         {(form.itinerary || []).length > 1 && <button onClick={() => removeDay(di)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', display: 'flex' }}><Trash2 size={14} /></button>}
                       </div>
                       <input value={day.title} onChange={e => itinChange(di, 'title', e.target.value)} style={{ ...S.input, marginBottom: 8 }} placeholder={`Day ${day.day} title`} />
-                      <textarea rows={2} value={day.description} onChange={e => itinChange(di, 'description', e.target.value)} style={{ ...S.input, resize: 'none', marginBottom: 10, lineHeight: 1.5 }} placeholder="Day description..." />
+                      <textarea rows={2} value={day.description} onChange={e => itinChange(di, 'description', e.target.value)} style={{ ...S.input, resize: 'none', marginBottom: 8, lineHeight: 1.5 }} placeholder="Day description..." />
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 5 }}>Day Image (optional)</div>
+                        <input value={day.image || ''} onChange={e => itinChange(di, 'image', e.target.value)} style={{ ...S.input, fontSize: 12 }} placeholder="https://images.unsplash.com/... (small thumbnail)" />
+                        {day.image && <img src={day.image} alt={`Day ${day.day}`} onError={e => e.target.style.display = 'none'} style={{ marginTop: 5, width: '100%', height: 60, objectFit: 'cover', borderRadius: 7 }} />}
+                      </div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 6 }}>Activities</div>
                       {(day.activities || []).map((act, ai) => (
                         <div key={ai} style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
@@ -802,16 +909,22 @@ export default function Dashboard() {
                       {form[f] && <img src={form[f]} alt="preview" onError={e => e.target.style.display = 'none'} style={{ marginTop: 6, width: '100%', height: 80, objectFit: 'cover', borderRadius: 8 }} />}
                     </div>
                   ))}
-                  {[{ l: 'Highlights', f: 'highlights', ph: 'e.g. Backwater houseboat' }, { l: 'Inclusions', f: 'inclusions', ph: 'e.g. Accommodation' }, { l: 'Exclusions', f: 'exclusions', ph: 'e.g. Flights' }].map(({ l, f, ph }) => (
-                    <div key={f} style={{ marginBottom: 14 }}>
+
+                  {[
+                    { l: 'Highlights', f: 'highlights', type: 'highlight', color: '#e8520a' },
+                    { l: 'Inclusions', f: 'inclusions', type: 'inclusion', color: '#22c55e' },
+                    { l: 'Exclusions', f: 'exclusions', type: 'exclusion', color: '#ef4444' },
+                  ].map(({ l, f, type, color }) => (
+                    <div key={f} style={{ marginBottom: 18 }}>
                       <label style={S.label}>{l}</label>
-                      {(form[f] || []).map((v, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
-                          <input value={v} onChange={e => arrChange(f, i, e.target.value)} style={{ ...S.input, fontSize: 13 }} placeholder={ph} />
-                          {(form[f] || []).length > 1 && <button onClick={() => arrDel(f, i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', flexShrink: 0 }}><X size={13} /></button>}
-                        </div>
-                      ))}
-                      <button onClick={() => arrAdd(f)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e8520a', fontSize: 12, fontWeight: 600, padding: '2px 0' }}>+ Add</button>
+                      <TagSelector
+                        type={type}
+                        selected={form[f] || []}
+                        onChange={val => setForm(p => ({ ...p, [f]: val }))}
+                        options={pkgOptions[type] || []}
+                        onOptionsUpdate={setPkgOptions}
+                        color={color}
+                      />
                     </div>
                   ))}
                 </div>

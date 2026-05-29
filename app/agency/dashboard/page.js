@@ -3,23 +3,40 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Plus, Package, LogOut, X, Check, Trash2, Eye, Clock, CheckCircle, XCircle, ExternalLink,
+  Plus, Package, LogOut, X, Check, Trash2, Clock, CheckCircle, XCircle, ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import TagSelector from '@/components/TagSelector'
+
+function fmtRange(start, end) {
+  if (!start && !end) return ''
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const f = d => { const dt = new Date(d + 'T00:00:00'); return `${dt.getDate()} ${M[dt.getMonth()]}, ${dt.getFullYear()}` }
+  const s = start ? f(start) : '', e = end ? f(end) : ''
+  return s && e ? `${s} – ${e}` : s || e
+}
+function autoMonth(dateStr) {
+  if (!dateStr) return ''
+  const dt = new Date(dateStr + 'T00:00:00')
+  return dt.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+}
+function getDR(dr) { return (dr && typeof dr === 'object') ? dr : { start: '', end: dr || '' } }
 
 const CATEGORIES = [
-  { value: 'group', label: 'Group Package' },
+  { value: 'package',  label: 'Package' },
+  { value: 'group',    label: 'Group Package' },
   { value: 'homestay', label: 'Home Stay' },
-  { value: 'other', label: 'Other' },
+  { value: 'other',    label: 'Other' },
 ]
 
 const EMPTY_PKG = {
   id: '', destination: '', badge: '', badgeColor: '#2e9e7a',
   duration: '3 Days & 2 Nights', title: '', subtitle: '', hotels: '',
   originalPrice: '', salePrice: '', priceNote: 'Per Person',
-  image: '', heroImage: '', overview: '', category: 'group',
-  highlights: [''], inclusions: [''], exclusions: [''],
-  itinerary: [{ day: 1, title: '', description: '', activities: [''] }],
+  image: '', heroImage: '', overview: '', category: 'package',
+  highlights: [], inclusions: [], exclusions: [],
+  itinerary: [{ day: 1, title: '', description: '', activities: [''], image: '' }],
+  availableDates: [],
 }
 
 function fmt(n) { return '₹' + Number(n).toLocaleString('en-IN') }
@@ -40,6 +57,7 @@ export default function AgencyDashboard() {
   const [tab, setTab] = useState('basic')
   const [saving, setSaving] = useState(false)
   const [agencyName, setAgencyName] = useState('')
+  const [pkgOptions, setPkgOptions] = useState({ inclusion: [], exclusion: [], highlight: [] })
 
   const fetchPackages = useCallback(async () => {
     try {
@@ -53,10 +71,8 @@ export default function AgencyDashboard() {
   useEffect(() => {
     fetchPackages()
     fetch('/api/destinations').then(r => r.ok ? r.json() : []).then(setDestinations).catch(() => {})
-    // Read agency name from cookie-derived API call
-    fetch('/api/agency/packages').then(r => {
-      if (r.status === 401) router.push('/agency')
-    })
+    fetch('/api/package-options').then(r => r.ok ? r.json() : null).then(d => { if (d) setPkgOptions(d) }).catch(() => {})
+    fetch('/api/agency/packages').then(r => { if (r.status === 401) router.push('/agency') })
   }, [fetchPackages, router])
 
   const S = {
@@ -77,17 +93,22 @@ export default function AgencyDashboard() {
     router.push('/agency')
   }
 
-  const arrChange = (field, idx, val) => { const a = [...(form[field] || [])]; a[idx] = val; setForm(f => ({ ...f, [field]: a })) }
-  const arrAdd = (field) => setForm(f => ({ ...f, [field]: [...(f[field] || []), ''] }))
-  const arrDel = (field, idx) => setForm(f => ({ ...f, [field]: (f[field] || []).filter((_, i) => i !== idx) }))
   const itinChange = (di, field, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => i === di ? { ...d, [field]: val } : d) }))
   const actChange = (di, ai, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => { if (i !== di) return d; const a = [...(d.activities || [])]; a[ai] = val; return { ...d, activities: a } }) }))
-  const addDay = () => setForm(f => ({ ...f, itinerary: [...(f.itinerary || []), { day: (f.itinerary || []).length + 1, title: '', description: '', activities: [''] }] }))
+  const addDay = () => setForm(f => ({ ...f, itinerary: [...(f.itinerary || []), { day: (f.itinerary || []).length + 1, title: '', description: '', activities: [''], image: '' }] }))
   const removeDay = (idx) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).filter((_, i) => i !== idx) }))
+
+  const addDateGroup = () => setForm(f => ({ ...f, availableDates: [...(f.availableDates || []), { month: '', dates: [{ start: '', end: '' }] }] }))
+  const removeDateGroup = (gi) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).filter((_, i) => i !== gi) }))
+  const dateGroupChange = (gi, field, val) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i === gi ? { ...g, [field]: val } : g) }))
+  const addDateRange = (gi) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i === gi ? { ...g, dates: [...(g.dates || []), { start: '', end: '' }] } : g) }))
+  const removeDateRange = (gi, di) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i !== gi ? g : { ...g, dates: (g.dates || []).filter((_, j) => j !== di) }) }))
+  const setDateField = (gi, di, field, val) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i !== gi ? g : { ...g, dates: (g.dates || []).map((d, j) => j !== di ? d : { ...getDR(d), [field]: val }) }) }))
 
   const openAdd = () => {
     const first = destinations[0]
-    setForm({ ...EMPTY_PKG, id: 'pkg-' + Date.now(), destination: first?.name ?? '', badgeColor: first?.color ?? '#2e9e7a' })
+    const pkgId = 'GKT-' + Math.random().toString(36).slice(2, 8).toUpperCase()
+    setForm({ ...EMPTY_PKG, id: pkgId, destination: first?.name ?? '', badgeColor: first?.color ?? '#2e9e7a' })
     setTab('basic')
     setModal('form')
   }
@@ -319,6 +340,54 @@ export default function AgencyDashboard() {
                     <label style={S.label}>Overview</label>
                     <textarea rows={3} value={form.overview} onChange={e => setForm(f => ({ ...f, overview: e.target.value }))} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} placeholder="Describe the package..." />
                   </div>
+                  {form.category === 'group' && (
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 4 }}>
+                        <label style={S.label}>Available Dates</label>
+                        <button onClick={addDateGroup} style={{ fontSize: 12, fontWeight: 600, color: '#1e3a5f', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Plus size={12} /> Add Batch
+                        </button>
+                      </div>
+                      {(form.availableDates || []).length === 0 && (
+                        <p style={{ fontSize: 12, color: '#9ca3af', background: '#f9fafb', borderRadius: 10, padding: '10px 14px', margin: 0 }}>No departure dates yet. Click &ldquo;Add Batch&rdquo; to add a group of dates.</p>
+                      )}
+                      {(form.availableDates || []).map((group, gi) => {
+                        const firstStart = getDR(group.dates?.[0]).start
+                        return (
+                          <div key={gi} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, marginBottom: 8, background: '#fafafa' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                              <input
+                                value={group.month}
+                                onChange={e => dateGroupChange(gi, 'month', e.target.value)}
+                                style={{ ...S.input, fontSize: 12, flex: 1 }}
+                                placeholder={autoMonth(firstStart) || 'Month label (auto-fills from dates)'}
+                              />
+                              <button onClick={() => removeDateGroup(gi)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', flexShrink: 0 }}><X size={14} /></button>
+                            </div>
+                            {(group.dates || []).map((dr, di) => {
+                              const d = getDR(dr)
+                              return (
+                                <div key={di} style={{ marginBottom: 8 }}>
+                                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                    <input type="date" value={d.start} onChange={e => setDateField(gi, di, 'start', e.target.value)} style={{ ...S.input, fontSize: 12, flex: 1 }} />
+                                    <span style={{ color: '#9ca3af', fontSize: 13, flexShrink: 0 }}>→</span>
+                                    <input type="date" value={d.end} onChange={e => setDateField(gi, di, 'end', e.target.value)} style={{ ...S.input, fontSize: 12, flex: 1 }} />
+                                    {(group.dates || []).length > 1 && (
+                                      <button onClick={() => removeDateRange(gi, di)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', flexShrink: 0 }}><X size={13} /></button>
+                                    )}
+                                  </div>
+                                  {(d.start || d.end) && (
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3, paddingLeft: 2 }}>{fmtRange(d.start, d.end)}</div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                            <button onClick={() => addDateRange(gi)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1e3a5f', fontSize: 12, fontWeight: 600, padding: '2px 0' }}>+ Add date range</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -333,7 +402,12 @@ export default function AgencyDashboard() {
                         )}
                       </div>
                       <input value={day.title} onChange={e => itinChange(di, 'title', e.target.value)} style={{ ...S.input, marginBottom: 8 }} placeholder={`Day ${day.day} title`} />
-                      <textarea rows={2} value={day.description} onChange={e => itinChange(di, 'description', e.target.value)} style={{ ...S.input, resize: 'none', marginBottom: 10, lineHeight: 1.5 }} placeholder="Day description..." />
+                      <textarea rows={2} value={day.description} onChange={e => itinChange(di, 'description', e.target.value)} style={{ ...S.input, resize: 'none', marginBottom: 8, lineHeight: 1.5 }} placeholder="Day description..." />
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 5 }}>Day Image (optional)</div>
+                        <input value={day.image || ''} onChange={e => itinChange(di, 'image', e.target.value)} style={{ ...S.input, fontSize: 12 }} placeholder="https://images.unsplash.com/... (small thumbnail)" />
+                        {day.image && <img src={day.image} alt={`Day ${day.day}`} onError={e => e.target.style.display = 'none'} style={{ marginTop: 5, width: '100%', height: 60, objectFit: 'cover', borderRadius: 7 }} />}
+                      </div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 6 }}>Activities</div>
                       {(day.activities || []).map((act, ai) => (
                         <div key={ai} style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
@@ -359,16 +433,22 @@ export default function AgencyDashboard() {
                       {form[f] && <img src={form[f]} alt="preview" onError={e => e.target.style.display = 'none'} style={{ marginTop: 6, width: '100%', height: 80, objectFit: 'cover', borderRadius: 8 }} />}
                     </div>
                   ))}
-                  {[{ l: 'Highlights', f: 'highlights', ph: 'e.g. Tea estate walk' }, { l: 'Inclusions', f: 'inclusions', ph: 'e.g. Accommodation' }, { l: 'Exclusions', f: 'exclusions', ph: 'e.g. Flights' }].map(({ l, f, ph }) => (
-                    <div key={f} style={{ marginBottom: 14 }}>
+
+                  {[
+                    { l: 'Highlights', f: 'highlights', type: 'highlight', color: '#1e3a5f' },
+                    { l: 'Inclusions', f: 'inclusions', type: 'inclusion', color: '#22c55e' },
+                    { l: 'Exclusions', f: 'exclusions', type: 'exclusion', color: '#ef4444' },
+                  ].map(({ l, f, type, color }) => (
+                    <div key={f} style={{ marginBottom: 18 }}>
                       <label style={S.label}>{l}</label>
-                      {(form[f] || []).map((v, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
-                          <input value={v} onChange={e => arrChange(f, i, e.target.value)} style={{ ...S.input, fontSize: 13 }} placeholder={ph} />
-                          {(form[f] || []).length > 1 && <button onClick={() => arrDel(f, i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', flexShrink: 0 }}><X size={13} /></button>}
-                        </div>
-                      ))}
-                      <button onClick={() => arrAdd(f)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1e3a5f', fontSize: 12, fontWeight: 600, padding: '2px 0' }}>+ Add</button>
+                      <TagSelector
+                        type={type}
+                        selected={form[f] || []}
+                        onChange={val => setForm(p => ({ ...p, [f]: val }))}
+                        options={pkgOptions[type] || []}
+                        onOptionsUpdate={setPkgOptions}
+                        color={color}
+                      />
                     </div>
                   ))}
                 </div>

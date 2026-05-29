@@ -160,7 +160,7 @@ export default function HomePage() {
                 Travel <span style={{ color: '#e8520a' }}>Thoughtfully</span>
               </h2>
               <p style={{ color: '#6b7280', lineHeight: 1.7, marginBottom: 32 }}>
-                We&apos;re not just a travel company — we&apos;re a community of explorers who believe Kerala deserves more than a postcard visit. From houseboat nights to spice-farm mornings, we craft journeys that go beyond the tourist trail.
+                We&apos;re not just a travel company — we&apos;re a community of explorers who believe tourists deserve more than a postcard visit. From houseboat nights to spice-farm mornings, we craft journeys that go beyond the tourist trail.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 {[
@@ -217,7 +217,7 @@ export default function HomePage() {
                 {[
                   'Submit packages directly from your agency dashboard',
                   'Each package is reviewed and published by our team',
-                  'Get enquiries from travellers looking for Kerala experiences',
+                  'Get enquiries from travellers looking for experiences',
                   'Completely free to join — just apply below',
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
