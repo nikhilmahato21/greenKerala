@@ -88,11 +88,15 @@ export default function Dashboard() {
   const [pkgOptions, setPkgOptions] = useState({ inclusion: [], exclusion: [], highlight: [] })
 
   const [newDest, setNewDest] = useState({ name: '', color: '#e8520a', image_url: '', description: '', emoji: '📍' })
+  const [destVisLoading, setDestVisLoading] = useState(null)
   const [destSaving, setDestSaving] = useState(false)
   const [editDestId, setEditDestId] = useState(null)
   const [editDestForm, setEditDestForm] = useState({ color: '#e8520a', image_url: '', description: '', emoji: '📍' })
   const [settingsForm, setSettingsForm] = useState({ phone: '', whatsapp: '', email: '', email2: '', banner_days: '30', admin_recovery_email: '', min_dest_packages: '1' })
   const [settingsSaving, setSettingsSaving] = useState(false)
+  const [adminUsername, setAdminUsername] = useState('')
+  const [newUsername, setNewUsername] = useState('')
+  const [usernameSaving, setUsernameSaving] = useState(false)
 
   const fetchPackages = useCallback(async () => {
     try {
@@ -149,6 +153,7 @@ export default function Dashboard() {
     if (section === 'settings') {
       let ignore = false
       fetch('/api/settings').then(r => r.ok ? r.json() : null).then(s => { if (!ignore && s) setSettingsForm({ phone: s.phone || '', whatsapp: s.whatsapp || '', email: s.email || '', email2: s.email2 || '', banner_days: s.banner_days || '30', admin_recovery_email: s.admin_recovery_email || '', min_dest_packages: s.min_dest_packages || '1' }) }).catch(() => {})
+      fetch('/api/auth/admin-profile').then(r => r.ok ? r.json() : null).then(d => { if (!ignore && d?.username) { setAdminUsername(d.username); setNewUsername(d.username) } }).catch(() => {})
       return () => { ignore = true }
     }
   }, [section, fetchEnquiries, fetchAgencies])
@@ -313,6 +318,17 @@ export default function Dashboard() {
     } catch { toast.error('Failed to update destination.') }
   }
 
+  const handleToggleDestFeatured = async (id, featured) => {
+    setDestVisLoading(id)
+    try {
+      const res = await fetch(`/api/destinations/${id}/feature`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ featured }) })
+      if (!res.ok) throw new Error()
+      await fetchDestinations()
+      toast.success(featured ? 'Destination shown on website' : 'Destination hidden from website')
+    } catch { toast.error('Failed to update destination visibility') }
+    finally { setDestVisLoading(null) }
+  }
+
   const handleDeleteDestination = (id, name) => {
     setConfirm({
       message: `Delete "${name}"? Existing packages will not be affected.`,
@@ -360,6 +376,20 @@ export default function Dashboard() {
       toast.success('Settings saved!')
     } catch { toast.error('Failed to save settings.') }
     finally { setSettingsSaving(false) }
+  }
+
+  const handleUpdateUsername = async () => {
+    if (!newUsername.trim()) { toast.error('Username cannot be empty'); return }
+    if (newUsername.trim() === adminUsername) { toast.info('Username unchanged'); return }
+    setUsernameSaving(true)
+    try {
+      const res = await fetch('/api/auth/admin-profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newUsername: newUsername.trim() }) })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Failed to update username'); return }
+      setAdminUsername(data.username)
+      toast.success('Username updated!')
+    } catch { toast.error('Failed to update username') }
+    finally { setUsernameSaving(false) }
   }
 
   // ─── Array helpers ────────────────────────────────────────────────────────
@@ -447,10 +477,11 @@ export default function Dashboard() {
       <div style={{ background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
           {[
-            { key: 'packages',  label: 'Packages',  icon: Package,   badge: pendingCount > 0 ? pendingCount : null },
-            { key: 'agencies',  label: 'Agencies',  icon: Building2, badge: pendingAgencies > 0 ? pendingAgencies : null },
-            { key: 'enquiries', label: 'Enquiries', icon: Inbox,     badge: enquiries.length > 0 && section !== 'enquiries' ? enquiries.length : null },
-            { key: 'settings',  label: 'Settings',  icon: Settings },
+            { key: 'packages',      label: 'Packages',     icon: Package,   badge: pendingCount > 0 ? pendingCount : null },
+            { key: 'destinations',  label: 'Destinations', icon: MapPin },
+            { key: 'agencies',      label: 'Agencies',     icon: Building2, badge: pendingAgencies > 0 ? pendingAgencies : null },
+            { key: 'enquiries',     label: 'Enquiries',    icon: Inbox,     badge: enquiries.length > 0 && section !== 'enquiries' ? enquiries.length : null },
+            { key: 'settings',      label: 'Settings',     icon: Settings },
           ].map(({ key, label, icon: Icon, badge }) => (
             <button key={key} onClick={() => setSection(key)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 18px', fontSize: 13, fontWeight: 600, border: 'none', background: 'none', cursor: 'pointer', borderBottom: `2px solid ${section === key ? '#e8520a' : 'transparent'}`, color: section === key ? '#e8520a' : '#6b7280', whiteSpace: 'nowrap', position: 'relative' }}>
@@ -666,6 +697,73 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+          </>
+        )}
+
+        {/* ── Destinations ── */}
+        {section === 'destinations' && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontWeight: 700, fontSize: 18, color: '#111', margin: 0 }}>Destinations</h2>
+                <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>{destinations.length} total · {destinations.filter(d => d.featured !== false).length} shown on website</p>
+              </div>
+              <button onClick={() => { setNewDest({ name: '', color: '#e8520a', image_url: '', description: '', emoji: '📍' }); setEditDestId(null); setModal('destination') }} style={S.btn()}>
+                <Plus size={13} /> Add Destination
+              </button>
+            </div>
+
+            {destinations.length === 0 ? (
+              <div style={{ ...S.card, padding: '60px 24px', textAlign: 'center', color: '#9ca3af' }}>
+                <MapPin size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                <p style={{ fontWeight: 600, fontSize: 15 }}>No destinations yet</p>
+                <p style={{ fontSize: 13 }}>Add destinations to organise your packages.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {destinations.map(d => (
+                  <div key={d.id} style={{ ...S.card, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', flexWrap: 'wrap', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{ width: 56, height: 44, borderRadius: 10, overflow: 'hidden', background: '#f3f4f6', flexShrink: 0 }}>
+                          {d.image_url && <img src={d.image_url} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 700, fontSize: 15, color: '#111' }}>{d.emoji || '📍'} {d.name}</span>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: d.color, display: 'inline-block' }} />
+                          </div>
+                          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                            {allPackages.filter(p => p.destination === d.name).length} packages
+                            {d.description && <span style={{ marginLeft: 8, color: '#6b7280' }}>· {d.description}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button
+                          onClick={() => handleToggleDestFeatured(d.id, !(d.featured !== false))}
+                          disabled={destVisLoading === d.id}
+                          title={d.featured !== false ? 'Shown on website — click to hide' : 'Hidden from website — click to show'}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, border: `1.5px solid ${d.featured !== false ? '#22c55e' : '#e5e7eb'}`, background: d.featured !== false ? '#f0fdf4' : '#f9fafb', cursor: destVisLoading === d.id ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 12, color: d.featured !== false ? '#22c55e' : '#9ca3af', opacity: destVisLoading === d.id ? 0.7 : 1 }}>
+                          {destVisLoading === d.id
+                            ? <span style={{ width: 13, height: 13, border: `2px solid ${d.featured !== false ? '#bbf7d0' : '#e5e7eb'}`, borderTop: `2px solid ${d.featured !== false ? '#22c55e' : '#9ca3af'}`, borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />
+                            : <Eye size={13} />}
+                          {d.featured !== false ? 'Visible' : 'Hidden'}
+                        </button>
+                        <button onClick={() => { setEditDestId(d.id); setEditDestForm({ color: d.color, image_url: d.image_url || '', description: d.description || '', emoji: d.emoji || '📍' }); setModal('destination') }}
+                          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                          <Pencil size={13} />
+                        </button>
+                        <button onClick={() => handleDeleteDestination(d.id, d.name)}
+                          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #fee2e2', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -926,18 +1024,41 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Admin Recovery Email */}
+              {/* Admin Account */}
               <div style={{ ...S.card, padding: '22px 24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
                   <div style={{ width: 34, height: 34, borderRadius: 10, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Mail size={15} style={{ color: '#d97706' }} />
+                    <Settings size={15} style={{ color: '#d97706' }} />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>Admin Recovery Email</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af' }}>OTP is sent here when admin uses "Forgot Password"</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>Admin Account</div>
+                    <div style={{ fontSize: 11, color: '#9ca3af' }}>Change your login username or recovery email</div>
                   </div>
                 </div>
-                <label style={S.label}>Recovery Email Address</label>
+
+                {/* Username */}
+                <label style={S.label}>Login Username</label>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <input
+                    value={newUsername}
+                    onChange={e => setNewUsername(e.target.value)}
+                    style={{ ...S.input, flex: 1 }}
+                    placeholder="e.g. admin"
+                  />
+                  <button
+                    onClick={handleUpdateUsername}
+                    disabled={usernameSaving || !newUsername.trim() || newUsername.trim() === adminUsername}
+                    style={{ ...S.btn('#f3f4f6', '#555'), flexShrink: 0, opacity: (usernameSaving || !newUsername.trim() || newUsername.trim() === adminUsername) ? 0.5 : 1, cursor: (usernameSaving || !newUsername.trim() || newUsername.trim() === adminUsername) ? 'not-allowed' : 'pointer' }}>
+                    {usernameSaving ? <span style={{ width: 12, height: 12, border: '2px solid #ccc', borderTop: '2px solid #555', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} /> : <Check size={13} />}
+                    Update
+                  </button>
+                </div>
+                {adminUsername && <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 16px' }}>Current: <strong>{adminUsername}</strong></p>}
+
+                <div style={{ height: 1, background: '#f3f4f6', margin: '4px 0 16px' }} />
+
+                {/* Recovery email */}
+                <label style={S.label}>Recovery Email <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(for Forgot Password OTP)</span></label>
                 <input
                   type="email"
                   value={settingsForm.admin_recovery_email}
@@ -945,7 +1066,7 @@ export default function Dashboard() {
                   style={{ ...S.input, marginBottom: 6 }}
                   placeholder="e.g. admin@greenkeralatrips.com"
                 />
-                <p style={{ fontSize: 11, color: '#9ca3af', margin: 0 }}>Set this before you need it — required for password recovery to work.</p>
+                <p style={{ fontSize: 11, color: '#9ca3af', margin: 0 }}>Saved with the main "Save All Settings" button below.</p>
               </div>
 
               <button onClick={handleSaveSettings} disabled={settingsSaving}
@@ -1164,6 +1285,15 @@ export default function Dashboard() {
                             <span style={{ fontSize: 11, color: '#9ca3af' }}>{allPackages.filter(p => p.destination === d.name).length} pkgs</span>
                           </div>
                           <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              onClick={() => handleToggleDestFeatured(d.id, !d.featured)}
+                              disabled={destVisLoading === d.id}
+                              title={d.featured !== false ? 'Shown on website (click to hide)' : 'Hidden from website (click to show)'}
+                              style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${d.featured !== false ? '#bbf7d0' : '#e5e7eb'}`, background: d.featured !== false ? '#f0fdf4' : '#f9fafb', cursor: destVisLoading === d.id ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: d.featured !== false ? '#22c55e' : '#d1d5db', opacity: destVisLoading === d.id ? 0.7 : 1 }}>
+                              {destVisLoading === d.id
+                                ? <span style={{ width: 11, height: 11, border: `2px solid ${d.featured !== false ? '#bbf7d0' : '#e5e7eb'}`, borderTop: `2px solid ${d.featured !== false ? '#22c55e' : '#9ca3af'}`, borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />
+                                : <Eye size={12} />}
+                            </button>
                             <button onClick={() => { if (editDestId === d.id) { setEditDestId(null); return }; setEditDestId(d.id); setEditDestForm({ color: d.color, image_url: d.image_url || '', description: d.description || '', emoji: d.emoji || '📍' }) }} style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #e5e7eb', background: editDestId === d.id ? '#fff5ef' : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: editDestId === d.id ? '#e8520a' : '#9ca3af' }}><Pencil size={12} /></button>
                             <button onClick={() => handleDeleteDestination(d.id, d.name)} style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #fee2e2', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}><Trash2 size={12} /></button>
                           </div>

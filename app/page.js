@@ -5,7 +5,7 @@ import HeroSlider from '@/components/HeroSlider'
 import PackageCard from '@/components/PackageCard'
 import Footer from '@/components/Footer'
 import { usePackages } from '@/hooks/usePackages'
-import { usePhone, useWhatsapp, useEmail, useEmail2, useSettings } from '@/hooks/useSettings'
+import { usePhone, useWhatsapp, useEmail, useEmail2 } from '@/hooks/useSettings'
 import {
   Phone, MessageCircle, MapPin, Mail, Star, Shield, Clock, Users,
   Building2, ArrowRight, CheckCircle, ChevronDown,
@@ -29,9 +29,6 @@ export default function HomePage() {
   const whatsapp = useWhatsapp()
   const email = useEmail()
   const email2 = useEmail2()
-  const settings = useSettings()
-  const minPkgs = Math.max(0, parseInt(settings.min_dest_packages ?? '1', 10) || 1)
-
   useEffect(() => {
     fetch('/api/destinations')
       .then(r => r.ok ? r.json() : [])
@@ -39,14 +36,14 @@ export default function HomePage() {
       .catch(() => {})
   }, [])
 
-  const visibleDestinations = destinations.filter(dest =>
-    packages.filter(p => p.destination === dest.name).length >= minPkgs
-  )
+  const visibleDestinations = destinations.filter(d => d.featured !== false)
+  const featuredDestNames = new Set(visibleDestinations.map(d => d.name))
 
   const shown = packages.filter(p => {
     const matchCat = activeCategory === 'all' || p.category === activeCategory
     const matchDest = activeDest === 'all' || p.destination === activeDest
-    return matchCat && matchDest
+    const matchFeatured = !p.destination || featuredDestNames.has(p.destination)
+    return matchCat && matchDest && matchFeatured
   })
 
   return (
@@ -286,10 +283,10 @@ export default function HomePage() {
         <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>Ready to Go?</p>
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(2rem, 5vw, 3rem)', color: '#fff', marginBottom: 14, lineHeight: 1.1 }}>
-            Let&apos;s Plan Your <span style={{ color: '#fbbf24' }}>Kerala Journey</span>
+            Let&apos;s Plan Your <span style={{ color: '#fbbf24' }}> Journey</span>
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 17, lineHeight: 1.6, marginBottom: 16 }}>
-            Tell us your dates and preferred destination — we&apos;ll craft the perfect Kerala itinerary for you.
+            Tell us your dates and preferred destination — we&apos;ll craft the perfect  itinerary for you.
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 14, marginBottom: 32 }}>
             <MapPin size={14} /> Kerala, India
