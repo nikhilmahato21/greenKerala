@@ -1,5 +1,6 @@
 import { createEnquiry, getEnquiries } from '@/lib/db'
 import { guardAdmin } from '@/lib/guardAdmin'
+import { sendEnquiryEmail } from '@/lib/email'
 
 export async function GET() {
   if (!(await guardAdmin())) {
@@ -25,6 +26,7 @@ export async function POST(request) {
       email: email?.trim() || null,
       message: message?.trim() || null,
     })
+    sendEnquiryEmail({ name: name.trim(), phone: phone.trim(), email: email?.trim(), message: message?.trim(), package_title }).catch(() => {})
     return Response.json(enquiry, { status: 201 })
   } catch {
     return Response.json({ error: 'Failed to submit enquiry' }, { status: 500 })
