@@ -303,12 +303,12 @@ export default function HomePage() {
                 <Mail size={18} /> Email Us
               </a>
             )}
-            {email2 && (
+            {/* {email2 && (
               <a href={`mailto:${email2}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 32px', borderRadius: 999, background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
                 <Mail size={18} /> Email Us (2)
               </a>
-            )}
+            )} */}
           </div>
         </div>
       </section>
