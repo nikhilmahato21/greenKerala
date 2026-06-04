@@ -260,7 +260,7 @@ export default function PackagePage({ params }) {
                               src={day.image}
                               alt={day.title}
                               onError={e => e.target.style.display = 'none'}
-                              style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 10, marginTop: 14, marginBottom: 12 }}
+                              style={{ width: '100%', height: 260, objectFit: 'cover', borderRadius: 10, marginTop: 14, marginBottom: 12 }}
                             />
                           )}
                           <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.7, margin: day.image ? '0 0 14px' : '14px 0' }}>{day.description}</p>
@@ -407,7 +407,7 @@ export default function PackagePage({ params }) {
                       </span>
                     </div>
                     <div style={{ fontSize: 40, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{fmt(pkg.salePrice)}</div>
-                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>per {pkg.priceNote}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{pkg.priceNote}</div>
                   </div>
 
                   <div style={{ padding: '20px 24px' }}>

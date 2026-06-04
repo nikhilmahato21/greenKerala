@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, Mail, MessageCircle, MapPin } from 'lucide-react'
@@ -16,6 +17,14 @@ export default function Footer() {
   const whatsapp = useWhatsapp()
   const email = useEmail()
   const email2 = useEmail2()
+  const [footerDests, setFooterDests] = useState([])
+
+  useEffect(() => {
+    fetch('/api/destinations')
+      .then(r => r.ok ? r.json() : [])
+      .then(dests => setFooterDests(dests.filter(d => d.featured !== false)))
+      .catch(() => {})
+  }, [])
 
   return (
     <footer style={{ background: '#0f1020' }} className="text-white">
@@ -41,9 +50,16 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color:'rgba(255,255,255,0.9)' }}>Destinations</h4>
             <ul className="space-y-2 text-sm" style={{ color:'rgba(255,255,255,0.5)' }}>
-              {['Munnar', 'Alleppey', 'Wayanad'].map(d => (
-                <li key={d}><Link href="/#packages" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors"><MapPin size={11}/>{d}</Link></li>
+              {footerDests.map(d => (
+                <li key={d.id}><Link href="/#packages" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors"><MapPin size={11}/>{d.emoji ? `${d.emoji} ` : ''}{d.name}</Link></li>
               ))}
+              {footerDests.length === 0 && (
+                <>
+                  <li><Link href="/#packages" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors"><MapPin size={11}/>Munnar</Link></li>
+                  <li><Link href="/#packages" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors"><MapPin size={11}/>Alleppey</Link></li>
+                  <li><Link href="/#packages" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors"><MapPin size={11}/>Wayanad</Link></li>
+                </>
+              )}
             </ul>
           </div>
 

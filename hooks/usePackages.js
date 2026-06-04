@@ -1,9 +1,8 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { SEED_PACKAGES } from '@/lib/packages'
 
 export function usePackages() {
-  const [packages, setPackages] = useState(SEED_PACKAGES)
+  const [packages, setPackages] = useState([])
   const [loaded, setLoaded] = useState(false)
 
   const fetchPackages = useCallback(async () => {

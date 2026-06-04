@@ -85,6 +85,9 @@ export default function Dashboard() {
   const [actionLoading, setActionLoading] = useState(null)
   const [pkgSearch, setPkgSearch] = useState('')
   const [agencyFilter, setAgencyFilter] = useState('all')
+  const [pkgAgencyFilter, setPkgAgencyFilter] = useState('all')
+  const [agencyDropdownOpen, setAgencyDropdownOpen] = useState(false)
+  const [agencyDropdownSearch, setAgencyDropdownSearch] = useState('')
   const [pkgOptions, setPkgOptions] = useState({ inclusion: [], exclusion: [], highlight: [] })
 
   const [newDest, setNewDest] = useState({ name: '', color: '#e8520a', image_url: '', description: '', emoji: '📍' })
@@ -406,9 +409,12 @@ export default function Dashboard() {
   const setDateField = (gi, di, field, val) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i !== gi ? g : { ...g, dates: (g.dates || []).map((d, j) => j !== di ? d : { ...getDR(d), [field]: val }) }) }))
 
   // ─── Derived data ─────────────────────────────────────────────────────────
+  const uniquePkgAgencies = [...new Set(allPackages.map(p => p.agencyName).filter(Boolean))].sort()
+
   const filteredPackages = allPackages
     .filter(p => pkgFilter === 'all' || p.category === pkgFilter)
     .filter(p => pkgStatus === 'all' || p.status === pkgStatus)
+    .filter(p => pkgAgencyFilter === 'all' || p.agencyName === pkgAgencyFilter)
     .filter(p => !pkgSearch.trim() || p.id.toLowerCase().includes(pkgSearch.toLowerCase()) || (p.title || '').toLowerCase().includes(pkgSearch.toLowerCase()))
 
   const pendingCount = allPackages.filter(p => p.status === 'pending').length
@@ -516,14 +522,60 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Search */}
-            <div style={{ marginBottom: 12 }}>
+            {/* Search + Agency filter */}
+            <div style={{ marginBottom: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <input
                 value={pkgSearch}
                 onChange={e => setPkgSearch(e.target.value)}
                 placeholder="Search by Package ID or title..."
-                style={{ width: '100%', maxWidth: 360, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#111', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', maxWidth: 320, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#111', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
               />
+              {uniquePkgAgencies.length > 0 && (
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setAgencyDropdownOpen(o => !o)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${pkgAgencyFilter !== 'all' ? '#e8520a' : '#e5e7eb'}`, background: pkgAgencyFilter !== 'all' ? '#fff5ef' : '#fff', fontSize: 13, color: pkgAgencyFilter !== 'all' ? '#e8520a' : '#374151', cursor: 'pointer', fontWeight: pkgAgencyFilter !== 'all' ? 700 : 400, minWidth: 180, justifyContent: 'space-between' }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Building2 size={13} />
+                      {pkgAgencyFilter === 'all' ? 'All Agencies' : pkgAgencyFilter}
+                    </span>
+                    <span style={{ fontSize: 10, opacity: 0.5 }}>▾</span>
+                  </button>
+                  {agencyDropdownOpen && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 240, overflow: 'hidden' }}
+                      onMouseLeave={() => setAgencyDropdownOpen(false)}
+                    >
+                      <div style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
+                        <input
+                          autoFocus
+                          value={agencyDropdownSearch}
+                          onChange={e => setAgencyDropdownSearch(e.target.value)}
+                          placeholder="Search agency..."
+                          style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                        {[{ value: 'all', label: 'All Agencies' }, ...uniquePkgAgencies.filter(a => a.toLowerCase().includes(agencyDropdownSearch.toLowerCase())).map(a => ({ value: a, label: a }))].map(opt => (
+                          <button key={opt.value} onClick={() => { setPkgAgencyFilter(opt.value); setAgencyDropdownOpen(false); setAgencyDropdownSearch('') }}
+                            style={{ width: '100%', padding: '9px 14px', textAlign: 'left', border: 'none', background: pkgAgencyFilter === opt.value ? '#fff5ef' : 'none', color: pkgAgencyFilter === opt.value ? '#e8520a' : '#374151', fontSize: 13, fontWeight: pkgAgencyFilter === opt.value ? 700 : 400, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {opt.value !== 'all' && <Building2 size={12} style={{ color: '#9ca3af', flexShrink: 0 }} />}
+                            {opt.label}
+                          </button>
+                        ))}
+                        {agencyDropdownSearch && uniquePkgAgencies.filter(a => a.toLowerCase().includes(agencyDropdownSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding: '12px 14px', fontSize: 12, color: '#9ca3af', textAlign: 'center' }}>No agencies found</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {pkgAgencyFilter !== 'all' && (
+                <button onClick={() => setPkgAgencyFilter('all')} style={{ fontSize: 12, color: '#9ca3af', border: 'none', background: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 6 }}>
+                  Clear ✕
+                </button>
+              )}
             </div>
 
             {/* Filters */}

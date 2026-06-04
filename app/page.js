@@ -24,7 +24,7 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeDest, setActiveDest] = useState('all')
   const [destinations, setDestinations] = useState([])
-  const { packages } = usePackages()
+  const { packages, loaded: pkgsLoaded } = usePackages()
   const phone = usePhone()
   const whatsapp = useWhatsapp()
   const email = useEmail()
@@ -151,7 +151,13 @@ export default function HomePage() {
             )}
           </div>
 
-          {shown.length === 0 ? (
+          {!pkgsLoaded ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>
+              <div style={{ width: 36, height: 36, border: '3px solid #f0ebe1', borderTop: '3px solid #e8520a', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+              <p style={{ fontSize: 14 }}>Loading packages...</p>
+            </div>
+          ) : shown.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🗺️</div>
               <p>No packages available for this selection.</p>

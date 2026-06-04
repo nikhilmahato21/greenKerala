@@ -48,7 +48,7 @@ export default function Navbar() {
               />
             </div>
             <span
-              className="font-bold text-lg md:text-xl leading-tight hidden sm:block"
+              className="font-bold text-lg md:text-3xl leading-tight hidden sm:block"
               style={{ fontFamily: 'Syne, sans-serif', color: scrolled ? '#1a3c2e' : '#fff' }}
             >
               Green Kerala<br />
