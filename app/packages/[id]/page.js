@@ -236,43 +236,94 @@ export default function PackagePage({ params }) {
                   Day-wise Itinerary
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {pkg.itinerary.map((day, i) => (
-                    <div key={i} style={{ border: '1px solid', borderColor: openDay === i ? '#fbd0b5' : '#f3f4f6', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-                      <button
-                        onClick={() => setOpenDay(openDay === i ? -1 : i)}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: openDay === i ? '#fff8f5' : '#fff', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#e8520a,#c93d00)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                            {day.day}
+                  {pkg.itinerary.map((day, i) => {
+                    const acts = (day.activities || []).map(a => typeof a === 'string' ? { time: '', emoji: '', title: a, details: [], tags: [] } : a)
+                    return (
+                      <div key={i} style={{ border: '1px solid', borderColor: openDay === i ? '#fbd0b5' : '#f3f4f6', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                        <button
+                          onClick={() => setOpenDay(openDay === i ? -1 : i)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: openDay === i ? '#fff8f5' : '#fff', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#e8520a,#c93d00)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                              {day.day}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>Day {day.day}</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>{day.title}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>Day {day.day}</div>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>{day.title}</div>
+                          {openDay === i ? <ChevronUp size={16} style={{ color: '#9ca3af', flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: '#9ca3af', flexShrink: 0 }} />}
+                        </button>
+                        {openDay === i && (
+                          <div style={{ padding: '0 16px 20px', borderTop: '1px solid #f9f0eb' }}>
+                            {day.image && (
+                              <img src={day.image} alt={day.title} onError={e => e.target.style.display = 'none'}
+                                style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 10, marginTop: 14, marginBottom: 14 }} />
+                            )}
+                            {day.description && (
+                              <p style={{ color: '#6b7280', fontSize: 13, lineHeight: 1.7, marginTop: 14, marginBottom: acts.length ? 20 : 0, padding: '0 2px' }}>{day.description}</p>
+                            )}
+                            {/* Timeline */}
+                            {acts.length > 0 && (
+                              <div style={{ position: 'relative', paddingLeft: 0, marginTop: day.description ? 0 : 14 }}>
+                                {/* Vertical line */}
+                                <div style={{ position: 'absolute', left: 44, top: 0, bottom: day.hotel ? 40 : 0, width: 2, background: '#f0ebe1', zIndex: 0 }} />
+                                {acts.map((act, ai) => (
+                                  <div key={ai} style={{ display: 'flex', gap: 0, marginBottom: 20, position: 'relative' }}>
+                                    {/* Time bubble */}
+                                    <div style={{ flexShrink: 0, width: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, zIndex: 1 }}>
+                                      {act.time ? (
+                                        <div style={{ background: '#1e293b', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 8px', borderRadius: 6, fontFamily: 'monospace', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                                          {act.time}
+                                        </div>
+                                      ) : (
+                                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#e8520a', border: '2px solid #fff', boxShadow: '0 0 0 2px #fbd0b5', marginTop: 6 }} />
+                                      )}
+                                    </div>
+                                    {/* Activity card */}
+                                    <div style={{ flex: 1, background: '#fff', border: '1px solid #f3f4f6', borderRadius: 12, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                                      {/* Title */}
+                                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 8 }}>
+                                        {act.emoji && <span style={{ fontSize: 16, lineHeight: 1.3, flexShrink: 0 }}>{act.emoji}</span>}
+                                        <span style={{ fontWeight: 700, fontSize: 13, color: '#111', lineHeight: 1.4 }}>{act.title}</span>
+                                      </div>
+                                      {/* Checkmark details */}
+                                      {(act.details || []).filter(Boolean).length > 0 && (
+                                        <ul style={{ margin: '0 0 8px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                          {act.details.filter(Boolean).map((det, ki) => (
+                                            <li key={ki} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, color: '#6b7280' }}>
+                                              <span style={{ color: '#22c55e', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                                              <span style={{ lineHeight: 1.5 }}>{det}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                      {/* Tags */}
+                                      {(act.tags || []).length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                                          {act.tags.map((tag, ti) => (
+                                            <span key={ti} style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: '#e0f2fe', color: '#0369a1' }}>{tag}</span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                                {/* Overnight stay */}
+                                {day.hotel && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', marginTop: 4 }}>
+                                    <span style={{ fontSize: 16 }}>🛏</span>
+                                    <span style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>Overnight stay at <span style={{ color: '#111' }}>{day.hotel}</span></span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        {openDay === i ? <ChevronUp size={16} style={{ color: '#9ca3af', flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: '#9ca3af', flexShrink: 0 }} />}
-                      </button>
-                      {openDay === i && (
-                        <div style={{ padding: '0 16px 16px', borderTop: '1px solid #f9f0eb' }}>
-                          {day.image && (
-                            <img
-                              src={day.image}
-                              alt={day.title}
-                              onError={e => e.target.style.display = 'none'}
-                              style={{ width: '100%', height: 260, objectFit: 'cover', borderRadius: 10, marginTop: 14, marginBottom: 12 }}
-                            />
-                          )}
-                          <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.7, margin: day.image ? '0 0 14px' : '14px 0' }}>{day.description}</p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {day.activities?.map((a, j) => (
-                              <span key={j} style={{ padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 500, background: '#f5f0e8', color: '#555' }}>{a}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </section>
             )}

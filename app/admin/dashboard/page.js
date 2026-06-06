@@ -44,7 +44,7 @@ const EMPTY_PKG = {
   originalPrice: '', salePrice: '', priceNote: 'Per Person',
   image: '', heroImage: '', overview: '', category: 'package',
   highlights: [], inclusions: [], exclusions: [],
-  itinerary: [{ day: 1, title: '', description: '', activities: [''], image: '' }],
+  itinerary: [{ day: 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }],
   availableDates: [],
 }
 
@@ -83,6 +83,7 @@ export default function Dashboard() {
   const [tab, setTab] = useState('basic')
   const [saving, setSaving] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
+  const [pkgVisLoading, setPkgVisLoading] = useState(null)
   const [pkgSearch, setPkgSearch] = useState('')
   const [agencyFilter, setAgencyFilter] = useState('all')
   const [pkgAgencyFilter, setPkgAgencyFilter] = useState('all')
@@ -178,12 +179,15 @@ export default function Dashboard() {
   }
 
   const openEdit = (pkg) => {
+    const migrateAct = a => typeof a === 'string'
+      ? { time: '', emoji: '', title: a, details: [''], tags: [] }
+      : { time: a.time || '', emoji: a.emoji || '', title: a.title || '', details: a.details?.length ? a.details : [''], tags: a.tags || [] }
     setForm({
       ...pkg,
       highlights: pkg.highlights || [],
       inclusions: pkg.inclusions || [],
       exclusions: pkg.exclusions || [],
-      itinerary: pkg.itinerary?.length ? pkg.itinerary.map(d => ({ ...d, activities: d.activities?.length ? d.activities : [''], image: d.image || '' })) : [{ day: 1, title: '', description: '', activities: [''], image: '' }],
+      itinerary: pkg.itinerary?.length ? pkg.itinerary.map(d => ({ ...d, hotel: d.hotel || '', activities: d.activities?.length ? d.activities.map(migrateAct) : [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: d.image || '' })) : [{ day: 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }],
       availableDates: pkg.availableDates || [],
     })
     setEditId(pkg.id); setTab('basic'); setModal('form')
@@ -199,7 +203,7 @@ export default function Dashboard() {
       highlights: (form.highlights || []).filter(Boolean),
       inclusions: (form.inclusions || []).filter(Boolean),
       exclusions: (form.exclusions || []).filter(Boolean),
-      itinerary: (form.itinerary || []).map(d => ({ ...d, activities: (d.activities || []).filter(Boolean) })),
+      itinerary: (form.itinerary || []).map(d => ({ ...d, activities: (d.activities || []).map(a => typeof a === 'string' ? { time: '', emoji: '', title: a, details: [], tags: [] } : { ...a, details: (a.details || []).filter(Boolean) }).filter(a => a.title || a.details?.length) })),
     }
     setSaving(true)
     try {
@@ -243,6 +247,20 @@ export default function Dashboard() {
       toast.error('Failed to update status')
     } finally {
       setActionLoading(null)
+    }
+  }
+
+  const handleTogglePkgHidden = async (id, hidden) => {
+    setPkgVisLoading(id)
+    try {
+      const res = await fetch(`/api/packages/${id}/hide`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hidden }) })
+      if (!res.ok) throw new Error()
+      await fetchPackages()
+      toast.success(hidden ? 'Package hidden from website' : 'Package visible on website')
+    } catch {
+      toast.error('Failed to update visibility')
+    } finally {
+      setPkgVisLoading(null)
     }
   }
 
@@ -397,9 +415,14 @@ export default function Dashboard() {
 
   // ─── Array helpers ────────────────────────────────────────────────────────
   const itinChange = (di, field, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => i === di ? { ...d, [field]: val } : d) }))
-  const actChange = (di, ai, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => { if (i !== di) return d; const a = [...(d.activities || [])]; a[ai] = val; return { ...d, activities: a } }) }))
-  const addDay = () => setForm(f => ({ ...f, itinerary: [...(f.itinerary || []), { day: (f.itinerary || []).length + 1, title: '', description: '', activities: [''], image: '' }] }))
+  const addDay = () => setForm(f => ({ ...f, itinerary: [...(f.itinerary || []), { day: (f.itinerary || []).length + 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }] }))
   const removeDay = (idx) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).filter((_, i) => i !== idx) }))
+  const addActivity = (di) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => i !== di ? d : { ...d, activities: [...(d.activities || []), { time: '', emoji: '', title: '', details: [''], tags: [] }] }) }))
+  const removeActivity = (di, ai) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => i !== di ? d : { ...d, activities: (d.activities || []).filter((_, j) => j !== ai) }) }))
+  const actFieldChange = (di, ai, field, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => { if (i !== di) return d; const acts = [...(d.activities || [])]; acts[ai] = { ...acts[ai], [field]: val }; return { ...d, activities: acts } }) }))
+  const actDetailChange = (di, ai, ki, val) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => { if (i !== di) return d; const acts = [...(d.activities || [])]; const det = [...(acts[ai].details || [])]; det[ki] = val; acts[ai] = { ...acts[ai], details: det }; return { ...d, activities: acts } }) }))
+  const addActDetail = (di, ai) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => { if (i !== di) return d; const acts = [...(d.activities || [])]; acts[ai] = { ...acts[ai], details: [...(acts[ai].details || []), ''] }; return { ...d, activities: acts } }) }))
+  const removeActDetail = (di, ai, ki) => setForm(f => ({ ...f, itinerary: (f.itinerary || []).map((d, i) => { if (i !== di) return d; const acts = [...(d.activities || [])]; acts[ai] = { ...acts[ai], details: (acts[ai].details || []).filter((_, j) => j !== ki) }; return { ...d, activities: acts } }) }))
 
   const addDateGroup = () => setForm(f => ({ ...f, availableDates: [...(f.availableDates || []), { month: '', dates: [{ start: '', end: '' }] }] }))
   const removeDateGroup = (gi) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).filter((_, i) => i !== gi) }))
@@ -644,7 +667,7 @@ export default function Dashboard() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                        {['Pkg ID', 'Package', 'Category', 'Destination', 'Price', 'Status', 'Hero', 'Actions'].map((h, i) => (
+                        {['Pkg ID', 'Package', 'Category', 'Destination', 'Price', 'Status', 'Hero', 'Visible', 'Actions'].map((h, i) => (
                           <th key={h} style={{ padding: '10px 16px', textAlign: i >= 6 ? 'center' : 'left', fontWeight: 700, color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -654,7 +677,7 @@ export default function Dashboard() {
                         const sc = STATUS_CONFIG[pkg.status] || STATUS_CONFIG.pending
                         const cat = CATEGORIES.find(c => c.value === pkg.category)
                         return (
-                          <tr key={pkg.id} style={{ borderBottom: idx < filteredPackages.length - 1 ? '1px solid #f9fafb' : 'none' }}
+                          <tr key={pkg.id} style={{ borderBottom: idx < filteredPackages.length - 1 ? '1px solid #f9fafb' : 'none', opacity: pkg.hidden ? 0.55 : 1 }}
                             onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                           >
@@ -724,6 +747,18 @@ export default function Dashboard() {
                                   )}
                                 </div>
                               )}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => handleTogglePkgHidden(pkg.id, !pkg.hidden)}
+                                disabled={pkgVisLoading === pkg.id}
+                                title={pkg.hidden ? 'Hidden from website — click to show' : 'Visible on website — click to hide'}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999, border: `1.5px solid ${pkg.hidden ? '#e5e7eb' : '#22c55e'}`, background: pkg.hidden ? '#f9fafb' : '#f0fdf4', cursor: pkgVisLoading === pkg.id ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 11, color: pkg.hidden ? '#9ca3af' : '#22c55e', opacity: pkgVisLoading === pkg.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                                {pkgVisLoading === pkg.id
+                                  ? <span style={{ width: 10, height: 10, border: `2px solid ${pkg.hidden ? '#e5e7eb' : '#bbf7d0'}`, borderTop: `2px solid ${pkg.hidden ? '#9ca3af' : '#22c55e'}`, borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />
+                                  : <Eye size={11} />}
+                                {pkg.hidden ? 'Hidden' : 'Visible'}
+                              </button>
                             </td>
                             <td style={{ padding: '12px 16px' }}>
                               <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
@@ -1251,25 +1286,67 @@ export default function Dashboard() {
                 <div>
                   {(form.itinerary || []).map((day, di) => (
                     <div key={di} style={{ border: '1px solid #f3f4f6', borderRadius: 12, padding: 14, marginBottom: 10, background: '#fafafa' }}>
+                      {/* Day header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                         <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#e8520a,#c93d00)', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{day.day}</div>
                         {(form.itinerary || []).length > 1 && <button onClick={() => removeDay(di)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', display: 'flex' }}><Trash2 size={14} /></button>}
                       </div>
-                      <input value={day.title} onChange={e => itinChange(di, 'title', e.target.value)} style={{ ...S.input, marginBottom: 8 }} placeholder={`Day ${day.day} title`} />
-                      <textarea rows={2} value={day.description} onChange={e => itinChange(di, 'description', e.target.value)} style={{ ...S.input, resize: 'none', marginBottom: 8, lineHeight: 1.5 }} placeholder="Day description..." />
-                      <div style={{ marginBottom: 10 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 5 }}>Day Image (optional)</div>
-                        <input value={day.image || ''} onChange={e => itinChange(di, 'image', e.target.value)} style={{ ...S.input, fontSize: 12 }} placeholder="https://images.unsplash.com/... (small thumbnail)" />
+                      <input value={day.title} onChange={e => itinChange(di, 'title', e.target.value)} style={{ ...S.input, marginBottom: 8 }} placeholder={`Day ${day.day} title (e.g. Arrival & Sightseeing)`} />
+                      <textarea rows={2} value={day.description} onChange={e => itinChange(di, 'description', e.target.value)} style={{ ...S.input, resize: 'none', marginBottom: 8, lineHeight: 1.5 }} placeholder="Brief day description..." />
+                      {/* Hotel / overnight */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        <span style={{ fontSize: 14 }}>🛏</span>
+                        <input value={day.hotel || ''} onChange={e => itinChange(di, 'hotel', e.target.value)} style={{ ...S.input, fontSize: 12 }} placeholder="Overnight stay at... (e.g. The ONE Legian)" />
+                      </div>
+                      {/* Day image */}
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 5 }}>Day Image URL (optional)</div>
+                        <input value={day.image || ''} onChange={e => itinChange(di, 'image', e.target.value)} style={{ ...S.input, fontSize: 12 }} placeholder="https://..." />
                         {day.image && <img src={day.image} alt={`Day ${day.day}`} onError={e => e.target.style.display = 'none'} style={{ marginTop: 5, width: '100%', height: 60, objectFit: 'cover', borderRadius: 7 }} />}
                       </div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 6 }}>Activities</div>
-                      {(day.activities || []).map((act, ai) => (
-                        <div key={ai} style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
-                          <input value={act} onChange={e => actChange(di, ai, e.target.value)} style={{ ...S.input, fontSize: 12 }} placeholder="Activity..." />
-                          {(day.activities || []).length > 1 && <button onClick={() => { const it = (form.itinerary || []).map((d, i) => i !== di ? d : { ...d, activities: (d.activities || []).filter((_, j) => j !== ai) }); setForm(f => ({ ...f, itinerary: it })) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', flexShrink: 0 }}><X size={13} /></button>}
-                        </div>
-                      ))}
-                      <button onClick={() => { const it = (form.itinerary || []).map((d, i) => i !== di ? d : { ...d, activities: [...(d.activities || []), ''] }); setForm(f => ({ ...f, itinerary: it })) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e8520a', fontSize: 12, fontWeight: 600, padding: '2px 0' }}>+ Add activity</button>
+                      {/* Activities */}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 8 }}>Activities / Schedule</div>
+                      {(day.activities || []).map((act, ai) => {
+                        const a = typeof act === 'string' ? { time: '', emoji: '', title: act, details: [''], tags: [] } : act
+                        return (
+                          <div key={ai} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 10, marginBottom: 8, background: '#fff' }}>
+                            {/* Time + Emoji + Title row */}
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 7 }}>
+                              <input value={a.time} onChange={e => actFieldChange(di, ai, 'time', e.target.value)} style={{ ...S.input, width: 80, flexShrink: 0, fontFamily: 'monospace', textAlign: 'center' }} placeholder="09:00" />
+                              <input value={a.emoji} onChange={e => actFieldChange(di, ai, 'emoji', e.target.value)} style={{ ...S.input, width: 52, flexShrink: 0, textAlign: 'center', fontSize: 16 }} placeholder="🏄" />
+                              <input value={a.title} onChange={e => actFieldChange(di, ai, 'title', e.target.value)} style={{ ...S.input, flex: 1 }} placeholder="Activity title..." />
+                              {(day.activities || []).length > 1 && (
+                                <button onClick={() => removeActivity(di, ai)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', flexShrink: 0 }}><Trash2 size={13} /></button>
+                              )}
+                            </div>
+                            {/* Detail checkpoints */}
+                            <div style={{ marginBottom: 6 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 4 }}>✓ Details / Checkpoints</div>
+                              {(a.details || []).map((det, ki) => (
+                                <div key={ki} style={{ display: 'flex', gap: 5, marginBottom: 4 }}>
+                                  <span style={{ color: '#22c55e', fontSize: 12, paddingTop: 10, flexShrink: 0 }}>✓</span>
+                                  <input value={det} onChange={e => actDetailChange(di, ai, ki, e.target.value)} style={{ ...S.input, fontSize: 12, flex: 1 }} placeholder="e.g. Pick up time 09:00 am, Start from hotel" />
+                                  {(a.details || []).length > 1 && <button onClick={() => removeActDetail(di, ai, ki)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', flexShrink: 0 }}><X size={12} /></button>}
+                                </div>
+                              ))}
+                              <button onClick={() => addActDetail(di, ai)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 11, fontWeight: 600, padding: '2px 0' }}>+ Add detail</button>
+                            </div>
+                            {/* Tags */}
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', marginBottom: 4 }}>Tags (comma-separated)</div>
+                              <input value={(a.tags || []).join(', ')} onChange={e => actFieldChange(di, ai, 'tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))} style={{ ...S.input, fontSize: 12 }} placeholder="e.g. Private Transfers, Meal Included" />
+                              {(a.tags || []).length > 0 && (
+                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 5 }}>
+                                  {(a.tags || []).map((tag, ti) => (
+                                    <span key={ti} style={{ padding: '2px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: '#e0f2fe', color: '#0369a1' }}>{tag}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      <button onClick={() => addActivity(di)} style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed #e5e7eb', background: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 12, fontWeight: 600 }}>+ Add Activity</button>
                     </div>
                   ))}
                   <button onClick={addDay} style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '2px dashed #fbd0b5', background: 'none', cursor: 'pointer', color: '#e8520a', fontSize: 13, fontWeight: 600 }}>+ Add Day</button>

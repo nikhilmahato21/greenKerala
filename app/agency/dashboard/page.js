@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Plus, Package, LogOut, X, Check, Trash2, Clock, CheckCircle, XCircle, ExternalLink,
+  Plus, Package, LogOut, X, Check, Trash2, Clock, CheckCircle, XCircle, ExternalLink, Eye,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import TagSelector from '@/components/TagSelector'
@@ -56,6 +56,7 @@ export default function AgencyDashboard() {
   const [form, setForm] = useState(EMPTY_PKG)
   const [tab, setTab] = useState('basic')
   const [saving, setSaving] = useState(false)
+  const [pkgVisLoading, setPkgVisLoading] = useState(null)
   const [agencyName, setAgencyName] = useState('')
   const [agencyPhone, setAgencyPhone] = useState('')
   const [phoneInput, setPhoneInput] = useState('')
@@ -127,6 +128,20 @@ export default function AgencyDashboard() {
   const addDateRange = (gi) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i === gi ? { ...g, dates: [...(g.dates || []), { start: '', end: '' }] } : g) }))
   const removeDateRange = (gi, di) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i !== gi ? g : { ...g, dates: (g.dates || []).filter((_, j) => j !== di) }) }))
   const setDateField = (gi, di, field, val) => setForm(f => ({ ...f, availableDates: (f.availableDates || []).map((g, i) => i !== gi ? g : { ...g, dates: (g.dates || []).map((d, j) => j !== di ? d : { ...getDR(d), [field]: val }) }) }))
+
+  const handleToggleHidden = async (id, hidden) => {
+    setPkgVisLoading(id)
+    try {
+      const res = await fetch(`/api/agency/packages/${id}/hide`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hidden }) })
+      if (!res.ok) throw new Error()
+      await fetchPackages()
+      toast.success(hidden ? 'Package hidden from website' : 'Package is now visible')
+    } catch {
+      toast.error('Failed to update visibility')
+    } finally {
+      setPkgVisLoading(null)
+    }
+  }
 
   const openAdd = () => {
     const first = destinations[0]
@@ -248,8 +263,8 @@ export default function AgencyDashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                    {['Package', 'Category', 'Destination', 'Price', 'Status'].map((h, i) => (
-                      <th key={h} style={{ padding: '10px 16px', textAlign: i === 4 ? 'right' : 'left', fontWeight: 700, color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                    {['Package', 'Category', 'Destination', 'Price', 'Status', 'Visibility'].map((h, i) => (
+                      <th key={h} style={{ padding: '10px 16px', textAlign: i >= 4 ? 'center' : 'left', fontWeight: 700, color: '#6b7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -259,7 +274,7 @@ export default function AgencyDashboard() {
                     const SI = sc.icon
                     const cat = CATEGORIES.find(c => c.value === pkg.category)
                     return (
-                      <tr key={pkg.id} style={{ borderBottom: idx < packages.length - 1 ? '1px solid #f9fafb' : 'none' }}
+                      <tr key={pkg.id} style={{ borderBottom: idx < packages.length - 1 ? '1px solid #f9fafb' : 'none', opacity: pkg.hidden ? 0.55 : 1 }}
                         onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
@@ -281,10 +296,26 @@ export default function AgencyDashboard() {
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontWeight: 700 }}>{fmt(pkg.salePrice)}</div>
                         </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, color: sc.color, background: sc.bg }}>
                             <SI size={11} /> {sc.label}
                           </span>
+                        </td>
+                        <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                          {pkg.status === 'approved' ? (
+                            <button
+                              onClick={() => handleToggleHidden(pkg.id, !pkg.hidden)}
+                              disabled={pkgVisLoading === pkg.id}
+                              title={pkg.hidden ? 'Hidden from website — click to show' : 'Visible on website — click to hide'}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, border: `1.5px solid ${pkg.hidden ? '#e5e7eb' : '#22c55e'}`, background: pkg.hidden ? '#f9fafb' : '#f0fdf4', cursor: pkgVisLoading === pkg.id ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 11, color: pkg.hidden ? '#9ca3af' : '#22c55e', opacity: pkgVisLoading === pkg.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                              {pkgVisLoading === pkg.id
+                                ? <span style={{ width: 10, height: 10, border: `2px solid ${pkg.hidden ? '#e5e7eb' : '#bbf7d0'}`, borderTop: `2px solid ${pkg.hidden ? '#9ca3af' : '#22c55e'}`, borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />
+                                : <Eye size={11} />}
+                              {pkg.hidden ? 'Hidden' : 'Visible'}
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: 11, color: '#d1d5db' }}>—</span>
+                          )}
                         </td>
                       </tr>
                     )
