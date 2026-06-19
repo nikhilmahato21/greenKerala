@@ -3,11 +3,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Plus, Package, LogOut, X, Check, Trash2, Clock, CheckCircle, XCircle, ExternalLink, Eye, Pencil,
+  Plus, Package, LogOut, X, Check, Trash2, Clock, CheckCircle, XCircle, ExternalLink, Eye, Pencil, Copy,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import TagSelector from '@/components/TagSelector'
 import PackagePreview from '@/components/PackagePreview'
+import HomestayFields from '@/components/HomestayFields'
 
 function fmtRange(start, end) {
   if (!start && !end) return ''
@@ -33,11 +34,16 @@ const CATEGORIES = [
 const EMPTY_PKG = {
   id: '', destination: '', badge: '', badgeColor: '#2e9e7a',
   duration: '3 Days & 2 Nights', title: '', subtitle: '', hotels: '',
-  originalPrice: '', salePrice: '', priceNote: 'Per Person',
-  image: '', heroImage: '', overview: '', category: 'package',
+  adults: '', children: '', rooms: '',
+  originalPrice: '', salePrice: '', childPrice: '', priceNote: 'Per Person',
+  image: '', heroImage: '', overview: '', note: '', category: 'package',
   highlights: [], inclusions: [], exclusions: [],
   itinerary: [{ day: 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }],
   availableDates: [],
+  // Homestay-specific
+  address: '', mapUrl: '', starRating: '', rating: '', ratingLabel: '',
+  amenities: [], roomTypes: [], nearby: [],
+  checkIn: '', checkOut: '', frontDesk: '', childPolicy: '', cribsExtraBeds: '', finePrint: '',
 }
 
 function fmt(n) { return '₹' + Number(n).toLocaleString('en-IN') }
@@ -93,7 +99,7 @@ export default function AgencyDashboard() {
     input:       { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#111', background: '#f9fafb', outline: 'none', boxSizing: 'border-box' },
     label:       { fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5, display: 'block' },
     overlay:     { position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px', overflowY: 'auto' },
-    modal:       { background: '#fff', borderRadius: 20, width: '100%', maxWidth: 620, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden', marginBottom: 32 },
+    modal:       { background: '#fff', borderRadius: 20, width: '100%', maxWidth: 860, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden', marginBottom: 32 },
   }
 
   const savePhone = async () => {
@@ -180,6 +186,30 @@ export default function AgencyDashboard() {
     setModal('form')
   }
 
+  const openDuplicate = (pkg) => {
+    const migrateAct = a => typeof a === 'string'
+      ? { time: '', emoji: '', title: a, details: [''], tags: [] }
+      : { time: a.time || '', emoji: a.emoji || '', title: a.title || '', details: a.details?.length ? a.details : [''], tags: a.tags || [] }
+    const pkgId = 'GKT-' + Math.random().toString(36).slice(2, 8).toUpperCase()
+    setForm({
+      ...EMPTY_PKG,
+      ...pkg,
+      id: pkgId,
+      title: pkg.title ? `${pkg.title} (Copy)` : '',
+      hidden: false,
+      highlights: pkg.highlights || [],
+      inclusions: pkg.inclusions || [],
+      exclusions: pkg.exclusions || [],
+      itinerary: pkg.itinerary?.length ? pkg.itinerary.map(d => ({ ...d, hotel: d.hotel || '', activities: d.activities?.length ? d.activities.map(migrateAct) : [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: d.image || '' })) : [{ day: 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }],
+      availableDates: pkg.availableDates || [],
+    })
+    setEditId(null)
+    setShowPreview(false)
+    setTab('basic')
+    setModal('form')
+    toast.success('Duplicated — adjust and submit as a new package')
+  }
+
   const handleSave = async () => {
     if (!form.title?.trim()) { toast.error('Package title is required'); setShowPreview(false); setTab('basic'); return }
     if (!form.salePrice) { toast.error('Sale price is required'); setShowPreview(false); setTab('basic'); return }
@@ -187,6 +217,10 @@ export default function AgencyDashboard() {
       ...form,
       originalPrice: Number(form.originalPrice) || 0,
       salePrice: Number(form.salePrice) || 0,
+      childPrice: Number(form.childPrice) || 0,
+      adults: Number(form.adults) || 0,
+      children: Number(form.children) || 0,
+      rooms: Number(form.rooms) || 0,
       highlights: (form.highlights || []).filter(Boolean),
       inclusions: (form.inclusions || []).filter(Boolean),
       exclusions: (form.exclusions || []).filter(Boolean),
@@ -353,12 +387,20 @@ export default function AgencyDashboard() {
                           )}
                         </td>
                         <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                          <button
-                            onClick={() => openEdit(pkg)}
-                            title="Edit package"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 11, color: '#1e3a5f' }}>
-                            <Pencil size={11} /> Edit
-                          </button>
+                          <div style={{ display: 'inline-flex', gap: 6 }}>
+                            <button
+                              onClick={() => openEdit(pkg)}
+                              title="Edit package"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 11, color: '#1e3a5f' }}>
+                              <Pencil size={11} /> Edit
+                            </button>
+                            <button
+                              onClick={() => openDuplicate(pkg)}
+                              title="Duplicate package"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 11, color: '#1e3a5f' }}>
+                              <Copy size={11} /> Duplicate
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -409,7 +451,7 @@ export default function AgencyDashboard() {
 
             {!showPreview && (
             <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', padding: '0 20px' }}>
-              {[['basic', 'Basic'], ['itinerary', 'Itinerary'], ['media', 'Media & Lists']].map(([k, l]) => (
+              {[['basic', 'Basic'], ...(form.category === 'homestay' ? [['stay', 'Stay Details']] : []), ['itinerary', 'Itinerary'], ['media', 'Media & Lists']].map(([k, l]) => (
                 <button key={k} onClick={() => setTab(k)}
                   style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, border: 'none', background: 'none', cursor: 'pointer', borderBottom: `2px solid ${tab === k ? '#1e3a5f' : 'transparent'}`, color: tab === k ? '#1e3a5f' : '#9ca3af' }}>
                   {l}
@@ -418,7 +460,7 @@ export default function AgencyDashboard() {
             </div>
             )}
 
-            <div style={{ padding: 20, maxHeight: '55vh', overflowY: 'auto' }}>
+            <div style={{ padding: 20, maxHeight: '70vh', overflowY: 'auto' }}>
               {showPreview && <PackagePreview pkg={form} />}
               {!showPreview && tab === 'basic' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -432,7 +474,7 @@ export default function AgencyDashboard() {
                   </div>
                   <div>
                     <label style={S.label}>Category *</label>
-                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ ...S.input, cursor: 'pointer' }}>
+                    <select value={form.category} onChange={e => { const cat = e.target.value; setForm(f => ({ ...f, category: cat })); if (cat !== 'homestay') setTab(t => t === 'stay' ? 'basic' : t) }} style={{ ...S.input, cursor: 'pointer' }}>
                       {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                     </select>
                   </div>
@@ -456,12 +498,34 @@ export default function AgencyDashboard() {
                     <input type="number" value={form.originalPrice} onChange={e => setForm(f => ({ ...f, originalPrice: e.target.value }))} style={S.input} placeholder="15000" />
                   </div>
                   <div>
-                    <label style={S.label}>Sale Price (₹) *</label>
+                    <label style={S.label}>Sale Price (₹) * <span style={{ textTransform: 'none', fontWeight: 600, color: '#9ca3af' }}>· per adult</span></label>
                     <input type="number" value={form.salePrice} onChange={e => setForm(f => ({ ...f, salePrice: e.target.value }))} style={S.input} placeholder="12000" />
+                  </div>
+                  <div>
+                    <label style={S.label}>Price per Child (₹)</label>
+                    <input type="number" value={form.childPrice} onChange={e => setForm(f => ({ ...f, childPrice: e.target.value }))} style={S.input} placeholder="6000" />
+                  </div>
+                  <div style={{ gridColumn: '1/-1', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={S.label}>Adults</label>
+                      <input type="number" min="0" value={form.adults} onChange={e => setForm(f => ({ ...f, adults: e.target.value }))} style={S.input} placeholder="2" />
+                    </div>
+                    <div>
+                      <label style={S.label}>Children</label>
+                      <input type="number" min="0" value={form.children} onChange={e => setForm(f => ({ ...f, children: e.target.value }))} style={S.input} placeholder="0" />
+                    </div>
+                    <div>
+                      <label style={S.label}>Rooms</label>
+                      <input type="number" min="0" value={form.rooms} onChange={e => setForm(f => ({ ...f, rooms: e.target.value }))} style={S.input} placeholder="1" />
+                    </div>
                   </div>
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={S.label}>Overview</label>
                     <textarea rows={3} value={form.overview} onChange={e => setForm(f => ({ ...f, overview: e.target.value }))} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} placeholder="Describe the package..." />
+                  </div>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={S.label}>Note (optional)</label>
+                    <textarea rows={2} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} placeholder="e.g. Rates vary on customization, special terms, important info..." />
                   </div>
                   {form.category === 'group' && (
                     <div style={{ gridColumn: '1/-1' }}>
@@ -583,6 +647,10 @@ export default function AgencyDashboard() {
                   ))}
                   <button onClick={addDay} style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '2px dashed #c7d2e0', background: 'none', cursor: 'pointer', color: '#1e3a5f', fontSize: 13, fontWeight: 600 }}>+ Add Day</button>
                 </div>
+              )}
+
+              {!showPreview && tab === 'stay' && (
+                <HomestayFields form={form} setForm={setForm} S={S} pkgOptions={pkgOptions} onOptionsUpdate={setPkgOptions} />
               )}
 
               {!showPreview && tab === 'media' && (

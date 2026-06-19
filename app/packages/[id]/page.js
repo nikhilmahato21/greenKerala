@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react'
 import { use } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import HomestayDetail from '@/components/HomestayDetail'
 import { usePhone, useWhatsapp } from '@/hooks/useSettings'
-import { Phone, MessageCircle, Clock, MapPin, Check, X, ChevronDown, ChevronUp, ArrowLeft, Send, User } from 'lucide-react'
+import { Phone, MessageCircle, Clock, MapPin, Check, X, ChevronDown, ChevronUp, ArrowLeft, Send, User, Info, Users, Baby, BedDouble } from 'lucide-react'
 import Link from 'next/link'
 
 function fmt(n) {
@@ -111,7 +112,24 @@ export default function PackagePage({ params }) {
     </main>
   )
 
+  if (pkg.category === 'homestay') return (
+    <main style={{ minHeight: '100vh', background: '#fff' }}>
+      <Navbar />
+      <HomestayDetail pkg={pkg} phone={phone} whatsapp={whatsapp} isMobile={isMobile} />
+      <Footer />
+    </main>
+  )
+
   const waMsg = `Hi! I want to book ${pkg.title} (${pkg.id}) — ${pkg.duration} — ${fmt(pkg.salePrice)}/person`
+
+  const occParts = [
+    Number(pkg.rooms) > 0 && `${pkg.rooms} room${Number(pkg.rooms) !== 1 ? 's' : ''}`,
+    Number(pkg.adults) > 0 && `${pkg.adults} adult${Number(pkg.adults) !== 1 ? 's' : ''}`,
+    Number(pkg.children) > 0 && `${pkg.children} child${Number(pkg.children) !== 1 ? 'ren' : ''}`,
+  ].filter(Boolean)
+  const occSummary = occParts.join(', ')
+  const hasBreakdown = Number(pkg.salePrice) > 0 && (Number(pkg.adults) > 0 || Number(pkg.children) > 0)
+  const waChanges = `Hi! I'd like to request changes for ${pkg.title} (${pkg.id})${occSummary ? ` — ${occSummary}` : ''}. Current rate: ₹${Number(pkg.salePrice).toLocaleString('en-IN')}/adult${Number(pkg.childPrice) > 0 ? `, ₹${Number(pkg.childPrice).toLocaleString('en-IN')}/child` : ''}.`
 
   return (
     <main style={{ minHeight: '100vh', background: '#fff' }}>
@@ -174,6 +192,16 @@ export default function PackagePage({ params }) {
                     </li>
                   ))}
                 </ul>
+              </section>
+            )}
+
+            {/* Note */}
+            {pkg.note?.trim() && (
+              <section style={{ marginBottom: 28 }}>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <Info size={15} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 2 }} />
+                  <p style={{ color: '#92400e', fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0 }}><strong>Note: </strong>{pkg.note}</p>
+                </div>
               </section>
             )}
 
@@ -355,6 +383,47 @@ export default function PackagePage({ params }) {
               </div>
             </section>
 
+            {/* Price Breakdown */}
+            {hasBreakdown && (
+              <section style={{ marginBottom: 40 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+                  <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: isMobile ? 20 : 24, color: '#111', margin: 0 }}>Price Breakdown</h2>
+                  <a
+                    href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(waChanges)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 999, background: 'linear-gradient(135deg,#25d366,#128c7e)', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap' }}
+                  >
+                    <MessageCircle size={15} /> Request Changes
+                  </a>
+                </div>
+                <div style={{ background: '#fff', border: '1px solid #f3f4f6', borderRadius: 16, padding: isMobile ? 18 : 22, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+                  {occSummary && <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>{occSummary}</div>}
+                  {Number(pkg.adults) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, marginBottom: 12, borderBottom: Number(pkg.childPrice) > 0 && Number(pkg.children) > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                      <span style={{ fontSize: 15, color: '#374151' }}>Price per adult</span>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: '#111' }}>{fmt(pkg.salePrice)}</span>
+                    </div>
+                  )}
+                  {Number(pkg.childPrice) > 0 && Number(pkg.children) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 15, color: '#374151' }}>Price per child</span>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: '#111' }}>{fmt(pkg.childPrice)}</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Note */}
+            {pkg.note?.trim() && (
+              <section style={{ marginBottom: 28 }}>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <Info size={15} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 2 }} />
+                  <p style={{ color: '#92400e', fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0 }}><strong>Note: </strong>{pkg.note}</p>
+                </div>
+              </section>
+            )}
+
             {/* ── Enquiry Form ── */}
             <section style={{ background: '#f9fafb', borderRadius: 20, padding: isMobile ? 20 : 28, border: '1px solid #f3f4f6' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -458,15 +527,37 @@ export default function PackagePage({ params }) {
                       </span>
                     </div>
                     <div style={{ fontSize: 40, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{fmt(pkg.salePrice)}</div>
-                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{pkg.priceNote}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{Number(pkg.childPrice) > 0 ? 'Per Adult' : pkg.priceNote}</div>
+                    {Number(pkg.childPrice) > 0 && (
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginTop: 8 }}>
+                        {fmt(pkg.childPrice)} <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.7)' }}>Per Child</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', marginTop: 12, padding: '8px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.15)' }}>
+                      <Info size={13} style={{ color: '#fff', flexShrink: 0, marginTop: 1 }} />
+                      <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>Rate may change based on your customization.</span>
+                    </div>
                   </div>
 
                   <div style={{ padding: '20px 24px' }}>
+                    {(Number(pkg.rooms) > 0 || Number(pkg.adults) > 0 || Number(pkg.children) > 0) && (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                        {[
+                          { Icon: BedDouble, n: pkg.rooms, s: 'Room', p: 'Rooms' },
+                          { Icon: Users, n: pkg.adults, s: 'Adult', p: 'Adults' },
+                          { Icon: Baby, n: pkg.children, s: 'Child', p: 'Children' },
+                        ].filter(({ n }) => Number(n) > 0).map(({ Icon, n, s, p }) => (
+                          <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: '#f5f0e8', color: '#9a3412', fontSize: 12.5, fontWeight: 700 }}>
+                            <Icon size={14} /> {n} {Number(n) !== 1 ? p : s}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {[
                       { l: 'Duration', v: pkg.duration },
                       { l: 'Destination', v: pkg.destination },
                       { l: 'Stay', v: pkg.hotels },
-                    ].map(({ l, v }) => (
+                    ].filter(({ v }) => v).map(({ l, v }) => (
                       <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, fontSize: 13 }}>
                         <span style={{ color: '#9ca3af' }}>{l}</span>
                         <span style={{ fontWeight: 600, color: '#111', maxWidth: '60%', textAlign: 'right' }}>{v}</span>

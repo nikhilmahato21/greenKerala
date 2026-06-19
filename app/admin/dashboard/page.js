@@ -4,8 +4,10 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { invalidateSettingsCache } from '@/hooks/useSettings'
 import TagSelector from '@/components/TagSelector'
+import PackagePreview from '@/components/PackagePreview'
+import HomestayFields from '@/components/HomestayFields'
 import {
-  Plus, Pencil, Trash2, LogOut, Eye, X, Check, ExternalLink, AlertTriangle,
+  Plus, Pencil, Copy, Trash2, LogOut, Eye, X, Check, ExternalLink, AlertTriangle,
   Package, MapPin, Inbox, Settings, Phone, MessageCircle, Mail, Calendar,
   Building2, CheckCircle, XCircle, Star,
 } from 'lucide-react'
@@ -41,11 +43,16 @@ const STATUS_CONFIG = {
 const EMPTY_PKG = {
   id: '', destination: '', badge: '', badgeColor: '#2e9e7a',
   duration: '3 Days & 2 Nights', title: '', subtitle: '', hotels: '',
-  originalPrice: '', salePrice: '', priceNote: 'Per Person',
-  image: '', heroImage: '', overview: '', category: 'package',
+  adults: '', children: '', rooms: '',
+  originalPrice: '', salePrice: '', childPrice: '', priceNote: 'Per Person',
+  image: '', heroImage: '', overview: '', note: '', category: 'package',
   highlights: [], inclusions: [], exclusions: [],
   itinerary: [{ day: 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }],
   availableDates: [],
+  // Homestay-specific
+  address: '', mapUrl: '', starRating: '', rating: '', ratingLabel: '',
+  amenities: [], roomTypes: [], nearby: [],
+  checkIn: '', checkOut: '', frontDesk: '', childPolicy: '', cribsExtraBeds: '', finePrint: '',
 }
 
 function fmtRange(start, end) {
@@ -81,6 +88,7 @@ export default function Dashboard() {
   const [featureModal, setFeatureModal] = useState(null) // { id, order } | null
   const [featureDays, setFeatureDays] = useState('30')
   const [tab, setTab] = useState('basic')
+  const [showPreview, setShowPreview] = useState(false)
   const [saving, setSaving] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
   const [pkgVisLoading, setPkgVisLoading] = useState(null)
@@ -175,7 +183,7 @@ export default function Dashboard() {
     const first = destinations[0]
     const pkgId = generatePkgId('package', allPackages)
     setForm({ ...EMPTY_PKG, id: pkgId, destination: first?.name ?? '', badgeColor: first?.color ?? '#2e9e7a' })
-    setEditId(null); setTab('basic'); setModal('form')
+    setEditId(null); setTab('basic'); setShowPreview(false); setModal('form')
   }
 
   const openEdit = (pkg) => {
@@ -190,16 +198,40 @@ export default function Dashboard() {
       itinerary: pkg.itinerary?.length ? pkg.itinerary.map(d => ({ ...d, hotel: d.hotel || '', activities: d.activities?.length ? d.activities.map(migrateAct) : [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: d.image || '' })) : [{ day: 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }],
       availableDates: pkg.availableDates || [],
     })
-    setEditId(pkg.id); setTab('basic'); setModal('form')
+    setEditId(pkg.id); setTab('basic'); setShowPreview(false); setModal('form')
+  }
+
+  const openDuplicate = (pkg) => {
+    const migrateAct = a => typeof a === 'string'
+      ? { time: '', emoji: '', title: a, details: [''], tags: [] }
+      : { time: a.time || '', emoji: a.emoji || '', title: a.title || '', details: a.details?.length ? a.details : [''], tags: a.tags || [] }
+    setForm({
+      ...EMPTY_PKG,
+      ...pkg,
+      id: generatePkgId(pkg.category, allPackages),
+      title: pkg.title ? `${pkg.title} (Copy)` : '',
+      featured: false, featuredAt: null, featuredDays: 30, hidden: false,
+      highlights: pkg.highlights || [],
+      inclusions: pkg.inclusions || [],
+      exclusions: pkg.exclusions || [],
+      itinerary: pkg.itinerary?.length ? pkg.itinerary.map(d => ({ ...d, hotel: d.hotel || '', activities: d.activities?.length ? d.activities.map(migrateAct) : [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: d.image || '' })) : [{ day: 1, title: '', description: '', activities: [{ time: '', emoji: '', title: '', details: [''], tags: [] }], image: '', hotel: '' }],
+      availableDates: pkg.availableDates || [],
+    })
+    setEditId(null); setTab('basic'); setShowPreview(false); setModal('form')
+    toast.success('Duplicated — adjust and save as a new package')
   }
 
   const handleSave = async () => {
-    if (!form.title?.trim()) { toast.error('Package title is required'); return }
-    if (!form.salePrice) { toast.error('Sale price is required'); return }
+    if (!form.title?.trim()) { toast.error('Package title is required'); setShowPreview(false); setTab('basic'); return }
+    if (!form.salePrice) { toast.error('Sale price is required'); setShowPreview(false); setTab('basic'); return }
     const pkg = {
       ...form,
       originalPrice: Number(form.originalPrice) || 0,
       salePrice: Number(form.salePrice) || 0,
+      childPrice: Number(form.childPrice) || 0,
+      adults: Number(form.adults) || 0,
+      children: Number(form.children) || 0,
+      rooms: Number(form.rooms) || 0,
       highlights: (form.highlights || []).filter(Boolean),
       inclusions: (form.inclusions || []).filter(Boolean),
       exclusions: (form.exclusions || []).filter(Boolean),
@@ -461,7 +493,7 @@ export default function Dashboard() {
                    boxShadow: active ? 'none' : '0 1px 4px rgba(0,0,0,0.07)',
                  }),
     overlay:     { position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px', overflowY: 'auto' },
-    modal:       { background: '#fff', borderRadius: 20, width: '100%', maxWidth: 620, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden', marginBottom: 32 },
+    modal:       { background: '#fff', borderRadius: 20, width: '100%', maxWidth: 860, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden', marginBottom: 32 },
   }
 
   if (!loaded) {
@@ -766,9 +798,13 @@ export default function Dashboard() {
                                   style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', textDecoration: 'none' }}>
                                   <Eye size={13} />
                                 </Link>
-                                <button onClick={() => openEdit(pkg)}
+                                <button onClick={() => openEdit(pkg)} title="Edit"
                                   style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #e5e7eb', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
                                   <Pencil size={13} />
+                                </button>
+                                <button onClick={() => openDuplicate(pkg)} title="Duplicate"
+                                  style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #e5e7eb', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                                  <Copy size={13} />
                                 </button>
                                 <button onClick={() => { setDeleteId(pkg.id); setModal('delete') }}
                                   style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #fee2e2', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
@@ -1170,16 +1206,19 @@ export default function Dashboard() {
         <div style={S.overlay}>
           <div style={S.modal}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'linear-gradient(135deg,#e8520a,#c93d00)' }}>
-              <h2 style={{ fontWeight: 700, fontSize: 16, color: '#fff' }}>{editId ? 'Edit Package' : 'Add Package'}</h2>
+              <h2 style={{ fontWeight: 700, fontSize: 16, color: '#fff' }}>{showPreview ? 'Package Preview' : editId ? 'Edit Package' : 'Add Package'}</h2>
               <button onClick={() => setModal(null)} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={15} /></button>
             </div>
+            {!showPreview && (
             <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', padding: '0 20px' }}>
-              {[['basic','Basic'],['itinerary','Itinerary'],['media','Media & Lists']].map(([k, l]) => (
+              {[['basic','Basic'], ...(form.category === 'homestay' ? [['stay','Stay Details']] : []), ['itinerary','Itinerary'],['media','Media & Lists']].map(([k, l]) => (
                 <button key={k} onClick={() => setTab(k)} style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, border: 'none', background: 'none', cursor: 'pointer', borderBottom: `2px solid ${tab === k ? '#e8520a' : 'transparent'}`, color: tab === k ? '#e8520a' : '#9ca3af' }}>{l}</button>
               ))}
             </div>
-            <div style={{ padding: 20, maxHeight: '60vh', overflowY: 'auto' }}>
-              {tab === 'basic' && (
+            )}
+            <div style={{ padding: 20, maxHeight: '70vh', overflowY: 'auto' }}>
+              {showPreview && <PackagePreview pkg={form} />}
+              {!showPreview && tab === 'basic' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
                     <label style={S.label}>Package ID</label>
@@ -1201,7 +1240,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <label style={S.label}>Category *</label>
-                    <select value={form.category} onChange={e => { const cat = e.target.value; setForm(f => ({ ...f, category: cat, ...(!editId && { id: generatePkgId(cat, allPackages) }) })) }} style={{ ...S.input, cursor: 'pointer' }}>
+                    <select value={form.category} onChange={e => { const cat = e.target.value; setForm(f => ({ ...f, category: cat, ...(!editId && { id: generatePkgId(cat, allPackages) }) })); if (cat !== 'homestay') setTab(t => t === 'stay' ? 'basic' : t) }} style={{ ...S.input, cursor: 'pointer' }}>
                       {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                     </select>
                   </div>
@@ -1225,12 +1264,34 @@ export default function Dashboard() {
                     <input type="number" value={form.originalPrice} onChange={e => setForm(f => ({ ...f, originalPrice: e.target.value }))} style={S.input} />
                   </div>
                   <div>
-                    <label style={S.label}>Sale Price (₹) *</label>
+                    <label style={S.label}>Sale Price (₹) * <span style={{ textTransform: 'none', fontWeight: 600, color: '#9ca3af' }}>· per adult</span></label>
                     <input type="number" value={form.salePrice} onChange={e => setForm(f => ({ ...f, salePrice: e.target.value }))} style={S.input} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Price per Child (₹)</label>
+                    <input type="number" value={form.childPrice} onChange={e => setForm(f => ({ ...f, childPrice: e.target.value }))} style={S.input} />
+                  </div>
+                  <div style={{ gridColumn: '1/-1', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={S.label}>Adults</label>
+                      <input type="number" min="0" value={form.adults} onChange={e => setForm(f => ({ ...f, adults: e.target.value }))} style={S.input} placeholder="2" />
+                    </div>
+                    <div>
+                      <label style={S.label}>Children</label>
+                      <input type="number" min="0" value={form.children} onChange={e => setForm(f => ({ ...f, children: e.target.value }))} style={S.input} placeholder="0" />
+                    </div>
+                    <div>
+                      <label style={S.label}>Rooms</label>
+                      <input type="number" min="0" value={form.rooms} onChange={e => setForm(f => ({ ...f, rooms: e.target.value }))} style={S.input} placeholder="1" />
+                    </div>
                   </div>
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={S.label}>Overview</label>
                     <textarea rows={3} value={form.overview} onChange={e => setForm(f => ({ ...f, overview: e.target.value }))} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
+                  </div>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={S.label}>Note (optional)</label>
+                    <textarea rows={2} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} placeholder="e.g. Rates vary on customization, special terms, important info..." />
                   </div>
                   {form.category === 'group' && (
                     <div style={{ gridColumn: '1/-1' }}>
@@ -1282,7 +1343,7 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
-              {tab === 'itinerary' && (
+              {!showPreview && tab === 'itinerary' && (
                 <div>
                   {(form.itinerary || []).map((day, di) => (
                     <div key={di} style={{ border: '1px solid #f3f4f6', borderRadius: 12, padding: 14, marginBottom: 10, background: '#fafafa' }}>
@@ -1352,7 +1413,11 @@ export default function Dashboard() {
                   <button onClick={addDay} style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '2px dashed #fbd0b5', background: 'none', cursor: 'pointer', color: '#e8520a', fontSize: 13, fontWeight: 600 }}>+ Add Day</button>
                 </div>
               )}
-              {tab === 'media' && (
+              {!showPreview && tab === 'stay' && (
+                <HomestayFields form={form} setForm={setForm} S={S} pkgOptions={pkgOptions} onOptionsUpdate={setPkgOptions} />
+              )}
+
+              {!showPreview && tab === 'media' && (
                 <div>
                   {[{ l: 'Card Image URL', f: 'image', ph: 'https://images.unsplash.com/...' }, { l: 'Hero Image URL', f: 'heroImage', ph: 'Large image for detail page' }].map(({ l, f, ph }) => (
                     <div key={f} style={{ marginBottom: 14 }}>
@@ -1383,7 +1448,16 @@ export default function Dashboard() {
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '14px 20px', borderTop: '1px solid #f3f4f6', background: '#fafafa' }}>
-              <button onClick={() => setModal(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              {showPreview ? (
+                <button onClick={() => setShowPreview(false)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer', marginRight: 'auto' }}>← Back to Edit</button>
+              ) : (
+                <button onClick={() => setModal(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              )}
+              {!showPreview && (
+                <button onClick={() => setShowPreview(true)} style={{ padding: '9px 18px', borderRadius: 10, border: '1.5px solid #e8520a', background: '#fff', color: '#e8520a', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye size={14} /> Preview
+                </button>
+              )}
               <button onClick={handleSave} disabled={saving} style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg,#e8520a,#c93d00)', color: '#fff', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
                 {saving ? <><span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} /> Saving...</> : <><Check size={14} /> {editId ? 'Save Changes' : 'Add Package'}</>}
               </button>
