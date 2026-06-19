@@ -26,7 +26,14 @@ export async function POST(request) {
       email: email?.trim() || null,
       message: message?.trim() || null,
     })
-    sendEnquiryEmail({ name: name.trim(), phone: phone.trim(), email: email?.trim(), message: message?.trim(), package_title }).catch(() => {})
+    // Await the email so it completes within the request lifecycle (a fire-and-forget
+    // promise can be killed when the serverless function freezes after responding).
+    // A mail failure must not fail the enquiry, so log it and continue.
+    try {
+      await sendEnquiryEmail({ name: name.trim(), phone: phone.trim(), email: email?.trim(), message: message?.trim(), package_title })
+    } catch (err) {
+      console.error('Failed to send enquiry email:', err)
+    }
     return Response.json(enquiry, { status: 201 })
   } catch {
     return Response.json({ error: 'Failed to submit enquiry' }, { status: 500 })

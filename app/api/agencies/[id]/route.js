@@ -31,7 +31,13 @@ export async function PUT(request, { params }) {
     if (status === 'approved') {
       const agency = await getAgencyById(Number(id))
       if (agency?.email) {
-        sendApprovalEmail(agency.email, agency.name).catch(() => {})
+        // Await so the mail sends before the serverless function freezes; a mail
+        // failure must not fail the status update, so log it and continue.
+        try {
+          await sendApprovalEmail(agency.email, agency.name)
+        } catch (err) {
+          console.error('Failed to send agency approval email:', err)
+        }
       }
     }
     return Response.json({ ok: true })
