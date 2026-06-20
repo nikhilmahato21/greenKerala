@@ -35,7 +35,8 @@ const NEARBY_TABS = [
 
 export default function HomestayDetail({ pkg, phone, whatsapp, isMobile }) {
   const rooms = (pkg.roomTypes || []).filter(r => r.name || r.price)
-  const gallery = [pkg.heroImage, pkg.image, ...rooms.map(r => r.image)].filter(Boolean)
+  const roomImgs = (r) => { const imgs = (r.images || []).filter(Boolean); return imgs.length ? imgs : (r.image ? [r.image] : []) }
+  const gallery = [pkg.heroImage, pkg.image, ...rooms.flatMap(roomImgs)].filter(Boolean)
   const [mainImg, setMainImg] = useState(gallery[0] || '')
   const nearby = pkg.nearby || []
   const firstNearbyType = NEARBY_TABS.find(t => nearby.some(n => n.type === t.value))?.value || 'landmark'
@@ -134,7 +135,22 @@ export default function HomestayDetail({ pkg, phone, whatsapp, isMobile }) {
               ].filter(Boolean)
               return (
                 <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
-                  {room.image && <img src={room.image} alt={room.name} onError={e => { e.target.style.display = 'none' }} style={{ width: '100%', height: 200, objectFit: 'cover' }} />}
+                  {(() => {
+                    const imgs = roomImgs(room)
+                    if (!imgs.length) return null
+                    return (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <img src={imgs[0]} alt={room.name} onError={e => { e.target.style.display = 'none' }} style={{ flex: imgs.length > 1 ? 2 : 1, minWidth: 0, height: 200, objectFit: 'cover' }} />
+                        {imgs.length > 1 && (
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                            {imgs.slice(1, 3).map((g, k) => (
+                              <img key={k} src={g} alt="" onError={e => { e.target.style.display = 'none' }} style={{ width: '100%', height: imgs.length > 2 ? 98 : 200, objectFit: 'cover' }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                   <div style={{ padding: 18 }}>
                     <h3 style={{ fontSize: 17, fontWeight: 700, color: '#111', marginBottom: 10 }}>{room.name}</h3>
                     {facts.length > 0 && (

@@ -17,6 +17,7 @@ const CATEGORY_TABS = [
   { value: 'package',  label: 'Packages' },
   { value: 'group',    label: 'Group Packages' },
   { value: 'homestay', label: 'Home Stays' },
+  { value: 'houseboat', label: 'Houseboats' },
   { value: 'other',    label: 'Other' },
 ]
 
@@ -24,6 +25,7 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeDest, setActiveDest] = useState('all')
   const [destinations, setDestinations] = useState([])
+  const [showAllDest, setShowAllDest] = useState(false)
   const { packages, loaded: pkgsLoaded } = usePackages()
   const phone = usePhone()
   const whatsapp = useWhatsapp()
@@ -66,7 +68,7 @@ export default function HomePage() {
 
           {visibleDestinations.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
-              {visibleDestinations.map(dest => (
+              {(showAllDest ? visibleDestinations : visibleDestinations.slice(0, 4)).map(dest => (
                 <button
                   key={dest.id}
                   onClick={() => {
@@ -89,6 +91,17 @@ export default function HomePage() {
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+
+          {visibleDestinations.length > 4 && (
+            <div style={{ textAlign: 'center', marginTop: 36 }}>
+              <button
+                onClick={() => setShowAllDest(s => !s)}
+                style={{ padding: '12px 32px', borderRadius: 999, border: '1.5px solid #e8520a', background: '#fff', color: '#e8520a', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              >
+                {showAllDest ? 'Show less' : `Show more (${visibleDestinations.length - 4})`}
+              </button>
             </div>
           )}
         </div>

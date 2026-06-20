@@ -28,6 +28,7 @@ const CATEGORIES = [
   { value: 'package',  label: 'Package' },
   { value: 'group',    label: 'Group Package' },
   { value: 'homestay', label: 'Home Stay' },
+  { value: 'houseboat', label: 'Houseboat' },
   { value: 'other',    label: 'Other' },
 ]
 
@@ -451,7 +452,7 @@ export default function AgencyDashboard() {
 
             {!showPreview && (
             <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', padding: '0 20px' }}>
-              {[['basic', 'Basic'], ...(form.category === 'homestay' ? [['stay', 'Stay Details']] : []), ['itinerary', 'Itinerary'], ['media', 'Media & Lists']].map(([k, l]) => (
+              {[['basic', 'Basic'], ...(['homestay','houseboat'].includes(form.category) ? [['stay', 'Stay Details']] : []), ['itinerary', 'Itinerary'], ['media', 'Media & Lists']].map(([k, l]) => (
                 <button key={k} onClick={() => setTab(k)}
                   style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, border: 'none', background: 'none', cursor: 'pointer', borderBottom: `2px solid ${tab === k ? '#1e3a5f' : 'transparent'}`, color: tab === k ? '#1e3a5f' : '#9ca3af' }}>
                   {l}
@@ -474,7 +475,7 @@ export default function AgencyDashboard() {
                   </div>
                   <div>
                     <label style={S.label}>Category *</label>
-                    <select value={form.category} onChange={e => { const cat = e.target.value; setForm(f => ({ ...f, category: cat })); if (cat !== 'homestay') setTab(t => t === 'stay' ? 'basic' : t) }} style={{ ...S.input, cursor: 'pointer' }}>
+                    <select value={form.category} onChange={e => { const cat = e.target.value; setForm(f => ({ ...f, category: cat })); if (!['homestay','houseboat'].includes(cat)) setTab(t => t === 'stay' ? 'basic' : t) }} style={{ ...S.input, cursor: 'pointer' }}>
                       {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                     </select>
                   </div>

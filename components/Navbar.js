@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Menu, X, Phone, MessageCircle } from 'lucide-react'
 import { usePhone } from '@/hooks/useSettings'
 
-export default function Navbar() {
+export default function Navbar({ big = false }) {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const phone = usePhone()
@@ -57,12 +57,12 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-7">
+          <div className={`hidden md:flex items-center ${big ? 'gap-9' : 'gap-7'}`}>
             {navLinks.map(l => (
               <Link
                 key={l.href}
                 href={l.href}
-                className="text-sm font-medium tracking-wide relative group transition-colors duration-200"
+                className={`${big ? 'text-base md:text-lg' : 'text-sm'} font-medium tracking-wide relative group transition-colors duration-200`}
                 style={{ color: scrolled ? '#374151' : 'rgba(255,255,255,0.9)' }}
               >
                 {l.label}

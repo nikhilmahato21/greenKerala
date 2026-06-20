@@ -78,8 +78,8 @@ export default function PackagePreview({ pkg }) {
         </div>
       )}
 
-      {/* Homestay details */}
-      {pkg.category === 'homestay' && (
+      {/* Homestay / Houseboat details */}
+      {(pkg.category === 'homestay' || pkg.category === 'houseboat') && (
         <>
           {pkg.address && (
             <div style={{ marginTop: 14, fontSize: 13, color: '#374151', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
@@ -100,7 +100,7 @@ export default function PackagePreview({ pkg }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {(pkg.roomTypes || []).filter(r => r.name || r.price).map((r, i) => (
                   <div key={i} style={{ display: 'flex', gap: 10, border: '1px solid #f3f4f6', borderRadius: 10, padding: 8, background: '#fafafa' }}>
-                    {r.image && <img src={r.image} alt="" onError={e => { e.target.style.display = 'none' }} style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />}
+                    {(() => { const im = (r.images || []).filter(Boolean)[0] || r.image; return im ? <img src={im} alt="" onError={e => { e.target.style.display = 'none' }} style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} /> : null })()}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>{r.name || 'Room'}</div>
                       <div style={{ fontSize: 12, color: '#6b7280' }}>{[r.bed, r.size && `${r.size}m²`, Number(r.guests) > 0 && `${r.guests} guests`].filter(Boolean).join(' · ')}</div>
@@ -122,7 +122,7 @@ export default function PackagePreview({ pkg }) {
       {/* Overview */}
       {pkg.overview && (
         <div style={{ marginTop: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{pkg.category === 'homestay' ? 'Description' : 'Overview'}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{(pkg.category === 'homestay' || pkg.category === 'houseboat') ? 'Description' : 'Overview'}</div>
           <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{pkg.overview}</p>
         </div>
       )}

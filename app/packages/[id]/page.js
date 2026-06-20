@@ -112,9 +112,9 @@ export default function PackagePage({ params }) {
     </main>
   )
 
-  if (pkg.category === 'homestay') return (
+  if (pkg.category === 'homestay' || pkg.category === 'houseboat') return (
     <main style={{ minHeight: '100vh', background: '#fff' }}>
-      <Navbar />
+      <Navbar big />
       <HomestayDetail pkg={pkg} phone={phone} whatsapp={whatsapp} isMobile={isMobile} />
       <Footer />
     </main>

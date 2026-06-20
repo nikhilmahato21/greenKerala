@@ -12,9 +12,10 @@ const NEARBY_TYPES = [
 // Props: form, setForm, S (shared style object with input/label), pkgOptions, onOptionsUpdate.
 export default function HomestayFields({ form, setForm, S, pkgOptions = {}, onOptionsUpdate }) {
   // ── Room types ──
-  const addRoom = () => setForm(f => ({ ...f, roomTypes: [...(f.roomTypes || []), { name: '', image: '', bed: '', size: '', guests: '', price: '', amenities: [] }] }))
+  const addRoom = () => setForm(f => ({ ...f, roomTypes: [...(f.roomTypes || []), { name: '', images: ['', '', ''], bed: '', size: '', guests: '', price: '', amenities: [] }] }))
   const removeRoom = (i) => setForm(f => ({ ...f, roomTypes: (f.roomTypes || []).filter((_, j) => j !== i) }))
   const roomChange = (i, field, val) => setForm(f => ({ ...f, roomTypes: (f.roomTypes || []).map((r, j) => j === i ? { ...r, [field]: val } : r) }))
+  const roomImageChange = (i, idx, val) => setForm(f => ({ ...f, roomTypes: (f.roomTypes || []).map((r, j) => { if (j !== i) return r; const imgs = [...(r.images || ['', '', ''])]; while (imgs.length < 3) imgs.push(''); imgs[idx] = val; return { ...r, images: imgs } }) }))
 
   // ── Nearby places ──
   const addNearby = () => setForm(f => ({ ...f, nearby: [...(f.nearby || []), { type: 'landmark', name: '', distance: '' }] }))
@@ -84,9 +85,16 @@ export default function HomestayFields({ form, setForm, S, pkgOptions = {}, onOp
               <input value={room.name} onChange={e => roomChange(i, 'name', e.target.value)} style={S.input} placeholder="e.g. Executive Room" />
             </div>
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={S.label}>Image URL</label>
-              <input value={room.image} onChange={e => roomChange(i, 'image', e.target.value)} style={S.input} placeholder="https://..." />
-              {room.image && <img src={room.image} alt="" onError={e => { e.target.style.display = 'none' }} style={{ marginTop: 6, width: '100%', height: 70, objectFit: 'cover', borderRadius: 8 }} />}
+              <label style={S.label}>Images (up to 3)</label>
+              {[0, 1, 2].map(idx => {
+                const val = (room.images || [])[idx] ?? (idx === 0 ? (room.image || '') : '')
+                return (
+                  <div key={idx} style={{ marginBottom: 8 }}>
+                    <input value={val} onChange={e => roomImageChange(i, idx, e.target.value)} style={S.input} placeholder={`Image ${idx + 1} URL`} />
+                    {val && <img src={val} alt="" onError={e => { e.target.style.display = 'none' }} style={{ marginTop: 6, width: '100%', height: 70, objectFit: 'cover', borderRadius: 8 }} />}
+                  </div>
+                )
+              })}
             </div>
             <div>
               <label style={S.label}>Bed</label>
